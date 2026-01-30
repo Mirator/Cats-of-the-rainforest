@@ -110,7 +110,7 @@ export class EnemySystem {
             }
 
             // Update mouse
-            const collided = mouse.update(deltaTime, pathfindingSystem, totem.getPosition());
+            const collided = mouse.update(deltaTime, pathfindingSystem, totem.getPosition(), trees);
 
             if (collided) {
                 // Mouse reached totem - deal damage
