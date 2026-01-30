@@ -16,7 +16,8 @@ export class MapSystem {
         const geometry = new THREE.PlaneGeometry(this.mapSize, this.mapSize);
         const material = new THREE.MeshStandardMaterial({ 
             color: 0x4a7c59,
-            roughness: 0.8
+            roughness: 0.8,
+            flatShading: true
         });
         this.ground = new THREE.Mesh(geometry, material);
         this.ground.rotation.x = -Math.PI / 2;
@@ -28,7 +29,7 @@ export class MapSystem {
         // Create simple boundary markers (corner posts)
         const boundaryHeight = 2;
         const boundaryGeometry = new THREE.BoxGeometry(0.5, boundaryHeight, 0.5);
-        const boundaryMaterial = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+        const boundaryMaterial = new THREE.MeshStandardMaterial({ color: 0x8b4513, flatShading: true });
         
         const positions = [
             [-this.boundary, 0, -this.boundary],

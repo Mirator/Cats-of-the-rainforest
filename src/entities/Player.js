@@ -72,11 +72,34 @@ export class Player {
             // Get the model from the scene
             const model = gltf.scene;
             
-            // Enable shadows on all meshes
+            // Enable shadows and flat shading on all meshes
             model.traverse((child) => {
                 if (child.isMesh) {
                     child.castShadow = true;
                     child.receiveShadow = true;
+                    
+                    // Apply flat shading to all materials
+                    const materials = Array.isArray(child.material) ? child.material : [child.material];
+                    materials.forEach((material, index) => {
+                        if (material) {
+                            // Clone material if it's shared to avoid affecting other meshes
+                            if (!material.userData.isCloned) {
+                                const clonedMaterial = material.clone();
+                                clonedMaterial.userData.isCloned = true;
+                                clonedMaterial.flatShading = true;
+                                
+                                // Replace in array if needed
+                                if (Array.isArray(child.material)) {
+                                    child.material[index] = clonedMaterial;
+                                } else {
+                                    child.material = clonedMaterial;
+                                }
+                            } else {
+                                // Material already cloned, just enable flat shading
+                                material.flatShading = true;
+                            }
+                        }
+                    });
                 }
             });
             

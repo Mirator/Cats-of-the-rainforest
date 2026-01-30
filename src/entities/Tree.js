@@ -15,14 +15,14 @@ export class Tree {
         
         // Trunk (cube) - doubled height from 2 to 4 units
         const trunkGeometry = new THREE.BoxGeometry(0.4, 4, 0.4);
-        const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+        const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x8b4513, flatShading: true });
         const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
         trunk.position.y = 2; // Half of height (4/2)
         trunk.castShadow = true;
         group.add(trunk);
         
         // Foliage (multiple cubes arranged in layers for tree-like shape)
-        const foliageMaterial = new THREE.MeshStandardMaterial({ color: 0x228b22 });
+        const foliageMaterial = new THREE.MeshStandardMaterial({ color: 0x228b22, flatShading: true });
         
         // Bottom foliage layer (largest)
         const foliageSize1 = 1.2;
