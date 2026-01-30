@@ -56,8 +56,14 @@ export class Player {
         const loader = new GLTFLoader();
         
         try {
-            // Use import.meta.env.BASE_URL for GitHub Pages compatibility
-            const baseUrl = import.meta.env.BASE_URL;
+            // Calculate base URL from current pathname for GitHub Pages compatibility
+            const pathname = window.location.pathname;
+            let baseUrl = '/';
+            if (pathname.includes('/Cats-of-the-rainforest/')) {
+                baseUrl = '/Cats-of-the-rainforest/';
+            } else if (pathname.startsWith('/Cats-of-the-rainforest')) {
+                baseUrl = '/Cats-of-the-rainforest/';
+            }
             const gltf = await loader.loadAsync(`${baseUrl}assets/models/cat.glb`);
             
             // Get the model from the scene
