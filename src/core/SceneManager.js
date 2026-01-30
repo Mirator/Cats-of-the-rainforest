@@ -101,8 +101,7 @@ export class SceneManager {
         // Smoothly move camera to follow player (with slowdown near boundaries)
         this.camera.position.lerp(cameraPos, lerpSpeed);
         
-        // Make camera look at player position
-        this.camera.lookAt(targetPosition);
+        // Camera rotation is fixed - do not rotate to look at player
     }
     
     render() {
