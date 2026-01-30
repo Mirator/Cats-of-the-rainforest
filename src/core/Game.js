@@ -70,7 +70,12 @@ export class Game {
         this.daySystem.onStateChange((dayInfo) => {
             this.uiManager.updateDayInfo(dayInfo.day, dayInfo.state);
             this.uiManager.setEndDayEnabled(dayInfo.state === DayState.DAY);
+            // Update visual environment based on day/night state
+            this.sceneManager.updateDayNightVisuals(dayInfo.state);
         });
+        
+        // Set initial day visuals
+        this.sceneManager.updateDayNightVisuals(DayState.DAY);
         
         // Initial UI update
         this.uiManager.updateResources(0, 0);
@@ -81,10 +86,10 @@ export class Game {
     generateTrees() {
         const mapSize = this.mapSystem.getMapSize();
         const boundary = this.mapSystem.getBoundary();
-        const treeCount = 20;
+        const treeCount = 80; // Increased from 20 to match 4x larger map
         
-        // Avoid center area for totem
-        const centerRadius = 3;
+        // Avoid center area for totem (scaled proportionally)
+        const centerRadius = 6;
         
         for (let i = 0; i < treeCount; i++) {
             let x, z;

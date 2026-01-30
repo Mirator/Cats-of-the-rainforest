@@ -21,18 +21,24 @@ export class SceneManager {
         
         // Create camera (positioned for 2.5D view)
         const aspect = window.innerWidth / window.innerHeight;
-        this.camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000);
-        this.camera.position.set(0, 15, 15);
+        this.camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
+        this.camera.position.set(0, 30, 30);
         this.camera.lookAt(0, 0, 0);
         
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        this.scene.add(ambientLight);
+        // Lighting - store references for day/night changes
+        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        this.scene.add(this.ambientLight);
         
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(10, 20, 10);
-        directionalLight.castShadow = true;
-        this.scene.add(directionalLight);
+        this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        this.directionalLight.position.set(10, 20, 10);
+        this.directionalLight.castShadow = true;
+        this.scene.add(this.directionalLight);
+        
+        // Add fog for atmospheric effect
+        this.scene.fog = new THREE.Fog(0x87CEEB, 50, 200);
+        
+        // Set initial day background
+        this.scene.background = new THREE.Color(0x87CEEB);
         
         // Handle window resize
         window.addEventListener('resize', () => this.onWindowResize());
@@ -65,5 +71,25 @@ export class SceneManager {
     
     remove(object) {
         this.scene.remove(object);
+    }
+    
+    updateDayNightVisuals(state) {
+        if (state === 'day') {
+            // Day settings: bright and clear
+            this.ambientLight.intensity = 0.6;
+            this.directionalLight.intensity = 0.8;
+            this.scene.background = new THREE.Color(0x87CEEB); // Sky blue
+            this.scene.fog.color.setHex(0x87CEEB); // Light fog
+            this.scene.fog.near = 50;
+            this.scene.fog.far = 200;
+        } else if (state === 'night') {
+            // Night settings: dark and atmospheric (no black - minimum 0x20 per channel)
+            this.ambientLight.intensity = 0.2;
+            this.directionalLight.intensity = 0.3;
+            this.scene.background = new THREE.Color(0x2a2a4e); // Dark blue/purple (not black)
+            this.scene.fog.color.setHex(0x2a2a4e); // Darker fog
+            this.scene.fog.near = 30;
+            this.scene.fog.far = 150;
+        }
     }
 }

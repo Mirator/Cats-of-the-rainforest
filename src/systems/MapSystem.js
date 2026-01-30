@@ -3,7 +3,7 @@ import * as THREE from 'three';
 export class MapSystem {
     constructor(scene) {
         this.scene = scene;
-        this.mapSize = 30;
+        this.mapSize = 120;
         this.boundary = this.mapSize / 2;
         this.ground = null;
         this.boundaries = [];

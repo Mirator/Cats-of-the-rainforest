@@ -30,12 +30,13 @@ export class Player {
         ];
         
         // Mask color palette (distinct from body, suitable for masks)
+        // No black colors - all colors have at least 0x20 in each RGB channel
         this.maskColorPalette = [
-            0x1a1a2e, 0x16213e, 0x0f3460, // Deep colors
+            0x2a3a5e, 0x263a5e, 0x1f4a80, // Deep colors (replaced near-black with dark blues)
             0x8b0000, 0x4b0082, 0x2d5016, // Rich colors
             0xff1493, 0x00ced1, 0xff6347, // Vibrant colors
             0x654321, 0x556b2f, 0x6b4423, // Earth tones
-            0x4682b4, 0x708090, 0x2f4f4f  // Metallic
+            0x4682b4, 0x708090, 0x3f5f5f  // Metallic (replaced 0x2f4f4f with lighter shade)
         ];
         
         // Create placeholder mesh while loading
