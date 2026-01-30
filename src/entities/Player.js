@@ -5,7 +5,7 @@ export class Player {
     constructor(x, z) {
         this.position = new THREE.Vector3(x, 0, z);
         this.mesh = null;
-        this.speed = 5;
+        this.speed = 6.5;
         this.interactionRange = 2.5;
         this.modelLoaded = false;
         this.yOffset = 0.5; // Default offset, will be calculated from model
@@ -276,7 +276,7 @@ export class Player {
         
         // Leg animation (alternating when moving)
         if (isMoving && this.legMeshes.length >= 2) {
-            const legSpeed = 3.5; // cycles per second (30% slower than original 5)
+            const legSpeed = 2.8; // cycles per second (20% slower than previous 3.5)
             const legAmplitude = 25 * (Math.PI / 180); // 25 degrees in radians (wider movement)
             
             // Animate legs in alternating pattern
