@@ -15,6 +15,9 @@ export class Player {
         this.legMeshes = [];
         this.headMesh = null;
         this.maskMesh = null;
+        this.tailMesh = null;
+        this.headOriginalPosition = null; // Store original head position to prevent drift
+        this.tailOriginalRotation = null; // Store original tail rotation
         
         // Color properties
         this.bodyColor = null;
@@ -64,7 +67,7 @@ export class Player {
             } else if (pathname.startsWith('/Cats-of-the-rainforest')) {
                 baseUrl = '/Cats-of-the-rainforest/';
             }
-            const gltf = await loader.loadAsync(`${baseUrl}assets/models/cat.glb`);
+            const gltf = await loader.loadAsync(`${baseUrl}assets/models/cat2.glb`);
             
             // Get the model from the scene
             const model = gltf.scene;
@@ -144,6 +147,7 @@ export class Player {
         this.legMeshes = [];
         this.headMesh = null;
         this.maskMesh = null;
+        this.tailMesh = null;
         
         if (!this.mesh) return;
         
@@ -163,6 +167,8 @@ export class Player {
                 if (child.isMesh || child.isGroup) {
                     if (!this.headMesh) {
                         this.headMesh = child;
+                        // Store original position to prevent drift during animation
+                        this.headOriginalPosition = child.position.clone();
                     }
                 }
             }
@@ -171,6 +177,20 @@ export class Player {
             if (name.includes('mask')) {
                 if (child.isMesh || child.isGroup) {
                     this.maskMesh = child;
+                }
+            }
+            
+            // Find tail
+            if (name.includes('tail')) {
+                if (child.isMesh || child.isGroup) {
+                    if (!this.tailMesh) {
+                        this.tailMesh = child;
+                        // Store original rotation to prevent drift during animation
+                        this.tailOriginalRotation = {
+                            y: child.rotation.y,
+                            z: child.rotation.z
+                        };
+                    }
                 }
             }
         });
@@ -192,15 +212,66 @@ export class Player {
         }
         
         // If still no head found, try to find a prominent child mesh
+        // Updated to handle new head position - check for any elevated part
         if (!this.headMesh && this.mesh.children) {
+            let highestChild = null;
+            let highestY = -Infinity;
+            
             for (const child of this.mesh.children) {
                 if (child.isMesh || child.isGroup) {
                     // Check bounding box - head is usually higher up
                     const box = new THREE.Box3().setFromObject(child);
-                    if (box.max.y > 0.3) { // Head is typically higher
-                        this.headMesh = child;
-                        break;
+                    // Lowered threshold to 0.2 to accommodate new head position
+                    if (box.max.y > 0.2 && box.max.y > highestY) {
+                        highestY = box.max.y;
+                        highestChild = child;
                     }
+                }
+            }
+            
+            if (highestChild) {
+                this.headMesh = highestChild;
+                // Store original position to prevent drift during animation
+                this.headOriginalPosition = highestChild.position.clone();
+            }
+        }
+        
+        // If tail not found by name, try to find by structure (typically at the back/rear)
+        if (!this.tailMesh && this.mesh.children) {
+            let rearMostChild = null;
+            let rearMostZ = Infinity; // Assuming model faces forward, tail is at negative Z
+            
+            for (const child of this.mesh.children) {
+                if (child.isMesh || child.isGroup) {
+                    // Skip if already identified as another part
+                    if (child === this.headMesh || child === this.maskMesh || 
+                        this.legMeshes.includes(child)) {
+                        continue;
+                    }
+                    
+                    const box = new THREE.Box3().setFromObject(child);
+                    // Tail is typically at the rear (negative Z in forward-facing models)
+                    // or could be identified by being elongated/extended
+                    const centerZ = (box.min.z + box.max.z) / 2;
+                    if (centerZ < rearMostZ) {
+                        rearMostZ = centerZ;
+                        rearMostChild = child;
+                    }
+                }
+            }
+            
+            // Only assign if we found something that seems like a tail
+            // (check if it's positioned behind the body center)
+            if (rearMostChild) {
+                const bodyBox = new THREE.Box3().setFromObject(this.mesh);
+                const bodyCenterZ = (bodyBox.min.z + bodyBox.max.z) / 2;
+                if (rearMostZ < bodyCenterZ - 0.1) { // At least 0.1 units behind body center
+                    this.tailMesh = rearMostChild;
+                    // Store original rotation to prevent drift during animation
+                    this.tailOriginalRotation = {
+                        y: rearMostChild.rotation.y,
+                        z: rearMostChild.rotation.z
+                    };
                 }
             }
         }
@@ -276,10 +347,10 @@ export class Player {
         
         // Leg animation (alternating when moving)
         if (isMoving && this.legMeshes.length >= 2) {
-            const legSpeed = 2.8; // cycles per second (20% slower than previous 3.5)
-            const legAmplitude = 25 * (Math.PI / 180); // 25 degrees in radians (wider movement)
+            const legSpeed = 2.8; // cycles per second
+            const legAmplitude = 25 * (Math.PI / 180); // 25 degrees in radians
             
-            // Animate legs in alternating pattern
+            // Animate legs in alternating pattern for smooth walking motion
             for (let i = 0; i < this.legMeshes.length; i++) {
                 const leg = this.legMeshes[i];
                 // Alternate legs: even indices move one way, odd indices move opposite
@@ -289,24 +360,48 @@ export class Player {
                 // Apply rotation on X axis (forward/backward leg movement)
                 leg.rotation.x = rotation;
             }
-        } else if (!isMoving) {
-            // Reset leg rotation when not moving
+        } else {
+            // Smoothly reset leg rotation when not moving
             this.legMeshes.forEach(leg => {
-                leg.rotation.x = 0;
+                // Smooth interpolation to zero for more natural stop
+                leg.rotation.x *= 0.9; // Gradually reduce rotation
+                if (Math.abs(leg.rotation.x) < 0.01) {
+                    leg.rotation.x = 0; // Snap to zero when close enough
+                }
             });
         }
         
         // Head animation (continuous gentle bobbing)
-        if (this.headMesh) {
+        if (this.headMesh && this.headOriginalPosition) {
             const headSpeed = 1.5; // cycles per second
             const headAmplitude = 2.5 * (Math.PI / 180); // 2.5 degrees in radians
             
-            // Gentle rotation animation
+            // Gentle rotation animation (preserves original rotation)
             this.headMesh.rotation.x = Math.sin(this.animationTime * headSpeed * 2 * Math.PI) * headAmplitude;
             
-            // Optional: also add slight translation bobbing
+            // Slight translation bobbing (relative to original position to prevent drift)
             const bobAmplitude = 0.03;
-            this.headMesh.position.y = Math.sin(this.animationTime * headSpeed * 2 * Math.PI) * bobAmplitude;
+            const bobOffset = Math.sin(this.animationTime * headSpeed * 2 * Math.PI) * bobAmplitude;
+            this.headMesh.position.y = this.headOriginalPosition.y + bobOffset;
+        }
+        
+        // Tail animation (subtle continuous swaying)
+        if (this.tailMesh && this.tailOriginalRotation) {
+            const tailSpeed = 1.0; // cycles per second (slower than head)
+            
+            // More pronounced when running, subtle when idle
+            const idleAmplitude = 3 * (Math.PI / 180); // 3 degrees in radians (subtle when idle)
+            const runningAmplitude = 6 * (Math.PI / 180); // 6 degrees in radians (more pronounced when running)
+            const tailAmplitude = isMoving ? runningAmplitude : idleAmplitude;
+            
+            // Swaying motion on Y axis (side to side)
+            // Preserve original rotation and add animation offset
+            const tailPhase = Math.sin(this.animationTime * tailSpeed * 2 * Math.PI) * tailAmplitude;
+            this.tailMesh.rotation.y = this.tailOriginalRotation.y + tailPhase;
+            
+            // Add slight Z rotation for more natural tail movement
+            const zRotation = Math.sin(this.animationTime * tailSpeed * 2 * Math.PI + Math.PI / 4) * tailAmplitude * 0.5;
+            this.tailMesh.rotation.z = this.tailOriginalRotation.z + zRotation;
         }
     }
     
