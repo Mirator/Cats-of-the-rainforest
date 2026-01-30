@@ -25,7 +25,6 @@ export class Player {
             0xff8c42, 0xff6b35, 0xffa500, // Orange/Ginger
             0x8b4513, 0xa0522d, 0xcd853f, // Brown/Tabby
             0x808080, 0x696969, 0x778899, // Gray
-            0x2c2c2c, 0x1a1a1a,           // Black
             0xfff8dc, 0xfffdd0,           // Cream
             0xff6b6b, 0xffa07a            // Calico patterns
         ];
