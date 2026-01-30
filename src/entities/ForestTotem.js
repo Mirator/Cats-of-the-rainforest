@@ -13,29 +13,67 @@ export class ForestTotem {
     createMesh() {
         const group = new THREE.Group();
         
-        // Base (cube)
-        const baseGeometry = new THREE.BoxGeometry(1, 1, 1);
-        const baseMaterial = new THREE.MeshStandardMaterial({ color: 0x654321 });
+        // Base platform (wider, more stable)
+        const baseGeometry = new THREE.BoxGeometry(1.4, 0.6, 1.4);
+        const baseMaterial = new THREE.MeshStandardMaterial({ color: 0x4a4a4a }); // Dark gray stone
         const base = new THREE.Mesh(baseGeometry, baseMaterial);
-        base.position.y = 0.5; // Half of height (1/2)
+        base.position.y = 0.3; // Half of height (0.6/2)
         base.castShadow = true;
         group.add(base);
         
-        // Middle section (cube)
-        const middleGeometry = new THREE.BoxGeometry(0.8, 2, 0.8);
-        const middleMaterial = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+        // Lower section (wider base of totem)
+        const lowerGeometry = new THREE.BoxGeometry(1.0, 1.2, 1.0);
+        const lowerMaterial = new THREE.MeshStandardMaterial({ color: 0x5a4a3a }); // Brown-gray stone
+        const lower = new THREE.Mesh(lowerGeometry, lowerMaterial);
+        lower.position.y = 1.2; // 0.6 (base top) + 0.6 (half of lower height)
+        lower.castShadow = true;
+        group.add(lower);
+        
+        // Middle section (main body)
+        const middleGeometry = new THREE.BoxGeometry(0.85, 1.8, 0.85);
+        const middleMaterial = new THREE.MeshStandardMaterial({ color: 0x6b5a4a }); // Lighter brown-gray
         const middle = new THREE.Mesh(middleGeometry, middleMaterial);
-        middle.position.y = 2; // 1 (base top) + 1 (half of middle height)
+        middle.position.y = 2.7; // 0.6 (base) + 1.2 (lower) + 0.9 (half of middle height)
         middle.castShadow = true;
         group.add(middle);
         
-        // Top (decorative cube)
-        const topGeometry = new THREE.BoxGeometry(0.6, 1.5, 0.6);
-        const topMaterial = new THREE.MeshStandardMaterial({ color: 0x228b22 });
+        // Upper section (narrower)
+        const upperGeometry = new THREE.BoxGeometry(0.7, 1.4, 0.7);
+        const upperMaterial = new THREE.MeshStandardMaterial({ color: 0x7b6a5a }); // Even lighter
+        const upper = new THREE.Mesh(upperGeometry, upperMaterial);
+        upper.position.y = 4.0; // 0.6 + 1.2 + 1.8 + 0.7 (half of upper height)
+        upper.castShadow = true;
+        group.add(upper);
+        
+        // Top decorative piece (smaller, distinct)
+        const topGeometry = new THREE.BoxGeometry(0.5, 0.8, 0.5);
+        const topMaterial = new THREE.MeshStandardMaterial({ color: 0x8b7a6a }); // Lightest stone
         const top = new THREE.Mesh(topGeometry, topMaterial);
-        top.position.y = 3.75; // 1 (base) + 2 (middle) + 0.75 (half of top height)
+        top.position.y = 5.0; // Previous sections + 0.4 (half of top height)
         top.castShadow = true;
         group.add(top);
+        
+        // Decorative accent cubes on sides (adds totem character)
+        const accentMaterial = new THREE.MeshStandardMaterial({ color: 0x4a2a1a }); // Dark brown accent
+        const accentSize = 0.15;
+        
+        // Add small decorative cubes on the middle section
+        const accentPositions = [
+            { x: 0.5, y: 2.7, z: 0 },   // Front
+            { x: -0.5, y: 2.7, z: 0 },  // Back
+            { x: 0, y: 2.7, z: 0.5 },   // Right
+            { x: 0, y: 2.7, z: -0.5 }   // Left
+        ];
+        
+        accentPositions.forEach(pos => {
+            const accent = new THREE.Mesh(
+                new THREE.BoxGeometry(accentSize, accentSize, accentSize),
+                accentMaterial
+            );
+            accent.position.set(pos.x, pos.y, pos.z);
+            accent.castShadow = true;
+            group.add(accent);
+        });
         
         group.position.copy(this.position);
         this.mesh = group;
