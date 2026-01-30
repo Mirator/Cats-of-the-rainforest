@@ -5,7 +5,7 @@ export class PlayerModel extends BaseModel {
     constructor(position, { onModelLoaded } = {}) {
         super(position, {
             onModelLoaded,
-            modelPath: 'cat3.glb',
+            modelPath: 'cat4.glb',
             placeholderColor: 0xff8c42,
             scale: 0.5
         });
