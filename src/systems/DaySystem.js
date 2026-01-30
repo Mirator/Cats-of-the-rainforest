@@ -30,11 +30,6 @@ export class DaySystem {
         if (this.state === DayState.DAY) {
             this.state = DayState.NIGHT;
             this.notifyListeners();
-            // For milestone 1, we'll just transition back to day after a moment
-            // In future milestones, this will trigger the night phase
-            setTimeout(() => {
-                this.startNextDay();
-            }, 1000);
         }
     }
     
