@@ -129,6 +129,9 @@ export class Game {
         // Update player
         this.player.update(deltaTime, this.inputManager, this.mapSystem);
         
+        // Update camera to follow player
+        this.sceneManager.updateCamera(this.player.getPosition());
+        
         // Handle tree cutting
         if (this.inputManager.isActionPressed()) {
             this.handleTreeCutting();

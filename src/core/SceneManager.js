@@ -22,7 +22,9 @@ export class SceneManager {
         // Create camera (positioned for 2.5D view)
         const aspect = window.innerWidth / window.innerHeight;
         this.camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
-        this.camera.position.set(0, 30, 30);
+        // Camera offset from player (closer for better zoom)
+        this.cameraOffset = new THREE.Vector3(0, 12, 12);
+        this.camera.position.set(0, 12, 12);
         this.camera.lookAt(0, 0, 0);
         
         // Lighting - store references for day/night changes
@@ -54,6 +56,21 @@ export class SceneManager {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    
+    updateCamera(targetPosition) {
+        if (!targetPosition) return;
+        
+        // Calculate camera position relative to player
+        const cameraPos = new THREE.Vector3();
+        cameraPos.copy(targetPosition);
+        cameraPos.add(this.cameraOffset);
+        
+        // Smoothly move camera to follow player
+        this.camera.position.lerp(cameraPos, 0.1);
+        
+        // Make camera look at player position
+        this.camera.lookAt(targetPosition);
     }
     
     render() {
