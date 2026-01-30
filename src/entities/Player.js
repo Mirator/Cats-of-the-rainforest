@@ -10,6 +10,35 @@ export class Player {
         this.modelLoaded = false;
         this.yOffset = 0.5; // Default offset, will be calculated from model
         
+        // Animation properties
+        this.animationTime = 0;
+        this.legMeshes = [];
+        this.headMesh = null;
+        this.maskMesh = null;
+        
+        // Color properties
+        this.bodyColor = null;
+        this.maskColor = null;
+        
+        // Body color palette (cat-friendly colors)
+        this.bodyColorPalette = [
+            0xff8c42, 0xff6b35, 0xffa500, // Orange/Ginger
+            0x8b4513, 0xa0522d, 0xcd853f, // Brown/Tabby
+            0x808080, 0x696969, 0x778899, // Gray
+            0x2c2c2c, 0x1a1a1a,           // Black
+            0xfff8dc, 0xfffdd0,           // Cream
+            0xff6b6b, 0xffa07a            // Calico patterns
+        ];
+        
+        // Mask color palette (distinct from body, suitable for masks)
+        this.maskColorPalette = [
+            0x1a1a2e, 0x16213e, 0x0f3460, // Deep colors
+            0x8b0000, 0x4b0082, 0x2d5016, // Rich colors
+            0xff1493, 0x00ced1, 0xff6347, // Vibrant colors
+            0x654321, 0x556b2f, 0x6b4423, // Earth tones
+            0x4682b4, 0x708090, 0x2f4f4f  // Metallic
+        ];
+        
         // Create placeholder mesh while loading
         this.createPlaceholder();
         this.loadModel();
@@ -27,7 +56,9 @@ export class Player {
         const loader = new GLTFLoader();
         
         try {
-            const gltf = await loader.loadAsync('/assets/models/cat.glb');
+            // Use import.meta.env.BASE_URL for GitHub Pages compatibility
+            const baseUrl = import.meta.env.BASE_URL;
+            const gltf = await loader.loadAsync(`${baseUrl}assets/models/cat.glb`);
             
             // Get the model from the scene
             const model = gltf.scene;
@@ -72,6 +103,13 @@ export class Player {
             this.mesh = model;
             this.modelLoaded = true;
             
+            // Find model parts (legs, head, mask) for animation and coloring
+            this.findModelParts();
+            
+            // Select and apply colors
+            this.selectRandomColors();
+            this.applyColors();
+            
             // Add new model to the same parent scene
             if (parentScene) {
                 parentScene.add(this.mesh);
@@ -95,10 +133,185 @@ export class Player {
         return this.position;
     }
     
+    findModelParts() {
+        // Reset arrays
+        this.legMeshes = [];
+        this.headMesh = null;
+        this.maskMesh = null;
+        
+        if (!this.mesh) return;
+        
+        // Traverse the model to find parts
+        this.mesh.traverse((child) => {
+            const name = child.name.toLowerCase();
+            
+            // Find legs (common naming patterns)
+            if (name.includes('leg') || name.includes('foot') || name.includes('paw')) {
+                if (child.isMesh || child.isGroup) {
+                    this.legMeshes.push(child);
+                }
+            }
+            
+            // Find head
+            if (name.includes('head') && !name.includes('mask')) {
+                if (child.isMesh || child.isGroup) {
+                    if (!this.headMesh) {
+                        this.headMesh = child;
+                    }
+                }
+            }
+            
+            // Find mask
+            if (name.includes('mask')) {
+                if (child.isMesh || child.isGroup) {
+                    this.maskMesh = child;
+                }
+            }
+        });
+        
+        // If we didn't find parts by name, try to find by structure
+        // Look for child meshes/groups that might be legs (typically 4 legs)
+        if (this.legMeshes.length === 0 && this.mesh.children) {
+            // Try to identify legs by position or as direct children
+            const children = this.mesh.children;
+            for (let i = 0; i < Math.min(children.length, 6); i++) {
+                const child = children[i];
+                if (child.isMesh || child.isGroup) {
+                    // Check if it's likely a leg (lower Y position, or just assume first few children)
+                    if (i < 4) {
+                        this.legMeshes.push(child);
+                    }
+                }
+            }
+        }
+        
+        // If still no head found, try to find a prominent child mesh
+        if (!this.headMesh && this.mesh.children) {
+            for (const child of this.mesh.children) {
+                if (child.isMesh || child.isGroup) {
+                    // Check bounding box - head is usually higher up
+                    const box = new THREE.Box3().setFromObject(child);
+                    if (box.max.y > 0.3) { // Head is typically higher
+                        this.headMesh = child;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    
+    selectRandomColors() {
+        // Select random body color
+        const bodyIndex = Math.floor(Math.random() * this.bodyColorPalette.length);
+        this.bodyColor = this.bodyColorPalette[bodyIndex];
+        
+        // Select random mask color, ensuring it's different from body color
+        let maskIndex;
+        let attempts = 0;
+        do {
+            maskIndex = Math.floor(Math.random() * this.maskColorPalette.length);
+            this.maskColor = this.maskColorPalette[maskIndex];
+            attempts++;
+            // Prevent infinite loop - if palette is too small, just accept it
+        } while (this.maskColor === this.bodyColor && attempts < 10);
+    }
+    
+    applyColors() {
+        if (!this.mesh) return;
+        
+        // Traverse all meshes and apply colors
+        this.mesh.traverse((child) => {
+            if (child.isMesh && child.material) {
+                // Check if this is the mask
+                const isMask = this.maskMesh && (
+                    child === this.maskMesh || 
+                    (this.maskMesh.isGroup && this.maskMesh.children.includes(child)) ||
+                    child.name.toLowerCase().includes('mask')
+                );
+                
+                // Apply color based on whether it's mask or body
+                const targetColor = isMask ? this.maskColor : this.bodyColor;
+                
+                // Handle both single material and material arrays
+                const materials = Array.isArray(child.material) ? child.material : [child.material];
+                
+                materials.forEach((material, index) => {
+                    if (material) {
+                        let materialToUse = material;
+                        
+                        // Clone material if it's shared to avoid affecting other meshes
+                        if (!material.userData.isCloned) {
+                            const clonedMaterial = material.clone();
+                            clonedMaterial.userData.isCloned = true;
+                            materialToUse = clonedMaterial;
+                            
+                            // Replace in array if needed
+                            if (Array.isArray(child.material)) {
+                                child.material[index] = clonedMaterial;
+                            } else {
+                                child.material = clonedMaterial;
+                            }
+                        }
+                        
+                        // Set color while preserving other properties
+                        if (materialToUse.color) {
+                            materialToUse.color.setHex(targetColor);
+                        }
+                    }
+                });
+            }
+        });
+    }
+    
+    updateAnimation(deltaTime, isMoving) {
+        if (!this.modelLoaded || !this.mesh) return;
+        
+        this.animationTime += deltaTime;
+        
+        // Leg animation (alternating when moving)
+        if (isMoving && this.legMeshes.length >= 2) {
+            const legSpeed = 3.5; // cycles per second (30% slower than original 5)
+            const legAmplitude = 25 * (Math.PI / 180); // 25 degrees in radians (wider movement)
+            
+            // Animate legs in alternating pattern
+            for (let i = 0; i < this.legMeshes.length; i++) {
+                const leg = this.legMeshes[i];
+                // Alternate legs: even indices move one way, odd indices move opposite
+                const phase = i % 2 === 0 ? 0 : Math.PI;
+                const rotation = Math.sin(this.animationTime * legSpeed * 2 * Math.PI + phase) * legAmplitude;
+                
+                // Apply rotation on X axis (forward/backward leg movement)
+                leg.rotation.x = rotation;
+            }
+        } else if (!isMoving) {
+            // Reset leg rotation when not moving
+            this.legMeshes.forEach(leg => {
+                leg.rotation.x = 0;
+            });
+        }
+        
+        // Head animation (continuous gentle bobbing)
+        if (this.headMesh) {
+            const headSpeed = 1.5; // cycles per second
+            const headAmplitude = 2.5 * (Math.PI / 180); // 2.5 degrees in radians
+            
+            // Gentle rotation animation
+            this.headMesh.rotation.x = Math.sin(this.animationTime * headSpeed * 2 * Math.PI) * headAmplitude;
+            
+            // Optional: also add slight translation bobbing
+            const bobAmplitude = 0.03;
+            this.headMesh.position.y = Math.sin(this.animationTime * headSpeed * 2 * Math.PI) * bobAmplitude;
+        }
+    }
+    
     update(deltaTime, inputManager, mapSystem) {
         const move = inputManager.getMovementVector();
+        const isMoving = move.x !== 0 || move.z !== 0;
         
-        if (move.x !== 0 || move.z !== 0) {
+        // Update animation
+        this.updateAnimation(deltaTime, isMoving);
+        
+        if (isMoving) {
             const moveSpeed = this.speed * deltaTime;
             const newX = this.position.x + move.x * moveSpeed;
             const newZ = this.position.z + move.z * moveSpeed;
@@ -115,10 +328,8 @@ export class Player {
             
             // Rotate player to face movement direction
             // Add Math.PI to flip 180 degrees if model is facing backwards
-            if (move.x !== 0 || move.z !== 0) {
-                const angle = Math.atan2(move.x, move.z) + Math.PI;
-                this.mesh.rotation.y = angle;
-            }
+            const angle = Math.atan2(move.x, move.z) + Math.PI;
+            this.mesh.rotation.y = angle;
         }
     }
     
