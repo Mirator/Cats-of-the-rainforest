@@ -8,6 +8,7 @@ export class DaySystem {
         this.state = DayState.DAY;
         this.currentDay = 1;
         this.listeners = [];
+        this.treesCutToday = 0;
     }
     
     getState() {
@@ -36,7 +37,20 @@ export class DaySystem {
     startNextDay() {
         this.state = DayState.DAY;
         this.currentDay++;
+        this.resetTreesCutToday();
         this.notifyListeners();
+    }
+    
+    incrementTreesCut() {
+        this.treesCutToday++;
+    }
+    
+    getTreesCutToday() {
+        return this.treesCutToday;
+    }
+    
+    resetTreesCutToday() {
+        this.treesCutToday = 0;
     }
     
     onStateChange(callback) {

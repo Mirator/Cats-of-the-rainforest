@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { MouseModel } from './MouseModel.js';
 
 export class Mouse {
-    constructor(x, z) {
+    constructor(x, z, hpMultiplier = 1.0) {
         this.position = new THREE.Vector3(x, 0, z);
         this.mesh = null;
         this.speed = 4.5; // Slower than player
@@ -10,6 +10,12 @@ export class Mouse {
         this.yOffset = 0.5;
         this.isDestroyed = false;
         this.damageAmount = 5; // Damage dealt to totem on collision
+        
+        // HP system
+        this.baseHP = 1;
+        this.hpMultiplier = hpMultiplier;
+        this.currentHP = this.baseHP * this.hpMultiplier;
+        this.maxHP = this.currentHP;
         
         // Pathfinding state
         this.currentPath = null;
@@ -136,5 +142,22 @@ export class Mouse {
 
     getDamageAmount() {
         return this.damageAmount;
+    }
+
+    getHP() {
+        return this.currentHP;
+    }
+
+    getMaxHP() {
+        return this.maxHP;
+    }
+
+    takeDamage(amount) {
+        this.currentHP = Math.max(0, this.currentHP - amount);
+        if (this.currentHP <= 0) {
+            this.isDestroyed = true;
+            return true;
+        }
+        return false;
     }
 }

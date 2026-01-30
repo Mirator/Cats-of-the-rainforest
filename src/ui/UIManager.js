@@ -55,6 +55,8 @@ export class UIManager {
         this.dayDisplay.innerHTML = `
             <div style="font-size: 18px; font-weight: bold; margin-bottom: 8px;">Day <span id="day-number">1</span></div>
             <div id="day-state" style="margin: 5px 0;">State: Day</div>
+            <div id="wave-info" style="margin: 5px 0; font-size: 14px; color: #ffd700;">Wave: <span id="wave-number">-</span>/5</div>
+            <div id="wave-progress" style="margin: 5px 0; font-size: 12px; color: #aaa;">Enemies: <span id="enemies-killed">0</span>/<span id="enemies-total">0</span></div>
         `;
         this.container.appendChild(this.dayDisplay);
         
@@ -122,5 +124,83 @@ export class UIManager {
         this.endDayButton.disabled = !enabled;
         this.endDayButton.style.opacity = enabled ? '1' : '0.5';
         this.endDayButton.style.cursor = enabled ? 'pointer' : 'not-allowed';
+    }
+    
+    updateWaveInfo(waveNumber, enemiesKilled, enemiesTotal) {
+        const waveNumberEl = this.dayDisplay.querySelector('#wave-number');
+        const enemiesKilledEl = this.dayDisplay.querySelector('#enemies-killed');
+        const enemiesTotalEl = this.dayDisplay.querySelector('#enemies-total');
+        const waveInfoEl = this.dayDisplay.querySelector('#wave-info');
+        const waveProgressEl = this.dayDisplay.querySelector('#wave-progress');
+        
+        if (waveNumberEl) {
+            if (waveNumber > 0) {
+                waveNumberEl.textContent = waveNumber;
+                if (waveInfoEl) waveInfoEl.style.display = 'block';
+                if (waveProgressEl) waveProgressEl.style.display = 'block';
+            } else {
+                if (waveInfoEl) waveInfoEl.style.display = 'none';
+                if (waveProgressEl) waveProgressEl.style.display = 'none';
+            }
+        }
+        
+        if (enemiesKilledEl) {
+            enemiesKilledEl.textContent = enemiesKilled;
+        }
+        if (enemiesTotalEl) {
+            enemiesTotalEl.textContent = enemiesTotal;
+        }
+    }
+    
+    showWinScreen() {
+        const winScreen = document.createElement('div');
+        winScreen.id = 'win-screen';
+        winScreen.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            color: white;
+            font-family: Arial, sans-serif;
+        `;
+        winScreen.innerHTML = `
+            <h1 style="font-size: 48px; margin-bottom: 20px; color: #ffd700;">Victory!</h1>
+            <p style="font-size: 24px; margin-bottom: 40px;">You have protected the rainforest!</p>
+            <p style="font-size: 18px; color: #aaa;">The forest is safe from the masked mice.</p>
+        `;
+        document.body.appendChild(winScreen);
+    }
+    
+    showGameOverScreen() {
+        const gameOverScreen = document.createElement('div');
+        gameOverScreen.id = 'game-over-screen';
+        gameOverScreen.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            color: white;
+            font-family: Arial, sans-serif;
+        `;
+        gameOverScreen.innerHTML = `
+            <h1 style="font-size: 48px; margin-bottom: 20px; color: #ff4444;">Game Over</h1>
+            <p style="font-size: 24px; margin-bottom: 40px;">The Forest Totem has been destroyed!</p>
+            <p style="font-size: 18px; color: #aaa;">Refresh the page to try again.</p>
+        `;
+        document.body.appendChild(gameOverScreen);
     }
 }

@@ -1,4 +1,6 @@
 import { Mouse } from '../entities/Mouse.js';
+import { FastMouse } from '../entities/FastMouse.js';
+import { StrongMouse } from '../entities/StrongMouse.js';
 
 export class EnemySystem {
     constructor(mapSystem, sceneManager) {
@@ -6,9 +8,19 @@ export class EnemySystem {
         this.sceneManager = sceneManager;
         this.enemies = [];
         this.boundary = mapSystem.getBoundary();
+        this.onEnemySpawnedCallback = null;
+        this.onEnemyKilledCallback = null;
+    }
+    
+    setOnEnemySpawned(callback) {
+        this.onEnemySpawnedCallback = callback;
+    }
+    
+    setOnEnemyKilled(callback) {
+        this.onEnemyKilledCallback = callback;
     }
 
-    spawnMouse(side, trees = []) {
+    spawnMouse(side, trees = [], enemyType = 'regular', hpMultiplier = 1.0) {
         // Spawn a mouse from specified side: 'north', 'south', 'east', 'west'
         let x, z;
         const spawnRadius = 2.5; // Minimum distance from trees
@@ -45,18 +57,66 @@ export class EnemySystem {
 
             // Check if spawn position is clear
             if (this.isSpawnPositionClear(x, z, trees, spawnRadius)) {
-                const mouse = new Mouse(x, z);
-                this.enemies.push(mouse);
-                this.sceneManager.add(mouse.getMesh());
-                return mouse;
+                const mouse = this.createEnemyByType(enemyType, x, z, hpMultiplier);
+                if (mouse) {
+                    this.enemies.push(mouse);
+                    this.sceneManager.add(mouse.getMesh());
+                    if (this.onEnemySpawnedCallback) {
+                        this.onEnemySpawnedCallback();
+                    }
+                    return mouse;
+                }
             }
         }
 
         // If no clear position found after maxAttempts, spawn anyway (at last attempted position)
-        const mouse = new Mouse(x, z);
-        this.enemies.push(mouse);
-        this.sceneManager.add(mouse.getMesh());
-        return mouse;
+        const mouse = this.createEnemyByType(enemyType, x, z, hpMultiplier);
+        if (mouse) {
+            this.enemies.push(mouse);
+            this.sceneManager.add(mouse.getMesh());
+            if (this.onEnemySpawnedCallback) {
+                this.onEnemySpawnedCallback();
+            }
+            return mouse;
+        }
+        return null;
+    }
+    
+    createEnemyByType(enemyType, x, z, hpMultiplier) {
+        switch (enemyType) {
+            case 'fast':
+                return new FastMouse(x, z, hpMultiplier);
+            case 'strong':
+                return new StrongMouse(x, z, hpMultiplier);
+            case 'regular':
+            default:
+                return new Mouse(x, z, hpMultiplier);
+        }
+    }
+    
+    spawnWaveEnemy(waveConfig, trees = []) {
+        // Select enemy type based on wave config probabilities
+        const enemyType = this.selectEnemyType(waveConfig.enemyTypes);
+        const side = this.getRandomSide();
+        return this.spawnMouse(side, trees, enemyType, waveConfig.hpMultiplier);
+    }
+    
+    selectEnemyType(enemyTypes) {
+        const rand = Math.random();
+        let cumulative = 0;
+        for (const typeConfig of enemyTypes) {
+            cumulative += typeConfig.probability;
+            if (rand <= cumulative) {
+                return typeConfig.type;
+            }
+        }
+        // Fallback to first type
+        return enemyTypes[0].type;
+    }
+    
+    getRandomSide() {
+        const sides = ['north', 'south', 'east', 'west'];
+        return sides[Math.floor(Math.random() * sides.length)];
     }
 
     spawnFromAllSides(trees = []) {
@@ -125,6 +185,10 @@ export class EnemySystem {
             const mouse = this.enemies[index];
             mouse.destroy();
             this.enemies.splice(index, 1);
+            // Notify wave system that enemy was killed
+            if (this.onEnemyKilledCallback) {
+                this.onEnemyKilledCallback();
+            }
         }
     }
 

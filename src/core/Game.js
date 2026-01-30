@@ -5,6 +5,7 @@ import { ResourceSystem } from '../systems/ResourceSystem.js';
 import { DaySystem, DayState } from '../systems/DaySystem.js';
 import { PathfindingSystem } from '../systems/PathfindingSystem.js';
 import { EnemySystem } from '../systems/EnemySystem.js';
+import { WaveSystem } from '../systems/WaveSystem.js';
 import { Player } from '../entities/Player.js';
 import { Tree } from '../entities/Tree.js';
 import { ForestTotem } from '../entities/ForestTotem.js';
@@ -21,6 +22,7 @@ export class Game {
         this.uiManager = null;
         this.pathfindingSystem = null;
         this.enemySystem = null;
+        this.waveSystem = null;
         
         this.player = null;
         this.trees = [];
@@ -30,8 +32,8 @@ export class Game {
         this.lastTime = 0;
         this.isRunning = false;
         this.lastSpawnTime = 0;
-        this.spawnInterval = 10.0; // Spawn enemies every 10 seconds
         this.gameTime = 0; // Total game time in seconds
+        this.hasWon = false;
         
         this.init();
     }
@@ -77,6 +79,17 @@ export class Game {
         // Initialize enemy system
         this.enemySystem = new EnemySystem(this.mapSystem, this.sceneManager);
         
+        // Initialize wave system
+        this.waveSystem = new WaveSystem();
+        
+        // Setup enemy system callbacks for wave tracking
+        this.enemySystem.setOnEnemySpawned(() => {
+            this.waveSystem.onEnemySpawned();
+        });
+        this.enemySystem.setOnEnemyKilled(() => {
+            this.waveSystem.onEnemyKilled();
+        });
+        
         // Setup UI callbacks
         this.setupUICallbacks();
         
@@ -92,9 +105,9 @@ export class Game {
             // Update visual environment based on day/night state
             this.sceneManager.updateDayNightVisuals(dayInfo.state);
             
-            // Spawn enemies when night starts
+            // Start wave when night starts
             if (dayInfo.state === DayState.NIGHT) {
-                this.enemySystem.spawnFromAllSides(this.trees);
+                this.startWave();
             }
         });
         
@@ -105,6 +118,32 @@ export class Game {
         this.uiManager.updateResources(0, 0);
         this.uiManager.updateDayInfo(1, DayState.DAY);
         this.uiManager.setEndDayEnabled(true);
+        this.uiManager.updateWaveInfo(0, 0, 0); // No wave during day
+    }
+    
+    startWave() {
+        const currentDay = this.daySystem.getCurrentDay();
+        const waveNumber = currentDay; // Each day = 1 wave
+        
+        // Calculate miceAlert from trees cut today
+        const treesCutToday = this.daySystem.getTreesCutToday();
+        const miceAlert = Math.min(treesCutToday * 0.5, 10); // Capped at 10
+        
+        // Start the wave
+        this.waveSystem.startWave(waveNumber, miceAlert);
+        const waveConfig = this.waveSystem.waveConfig;
+        
+        // Update UI
+        this.uiManager.updateWaveInfo(waveNumber, 0, waveConfig.enemyCount);
+        
+        // Spawn initial enemies based on wave config
+        // For wave 5 (boss), spawn immediately
+        if (waveNumber === 5) {
+            this.enemySystem.spawnWaveEnemy(waveConfig, this.trees);
+        } else {
+            // For other waves, start spawning periodically
+            this.lastSpawnTime = this.gameTime;
+        }
     }
     
     generateTrees() {
@@ -185,15 +224,44 @@ export class Game {
         // Update enemy system
         this.enemySystem.update(deltaTime, this.pathfindingSystem, this.forestTotem, this.trees);
         
-        // Check if all enemies are dead and it's night - end night
-        if (this.daySystem.isNight() && this.enemySystem.getEnemies().length === 0) {
-            this.daySystem.startNextDay();
+        // Handle wave spawning and completion
+        if (this.daySystem.isNight() && !this.hasWon) {
+            const waveConfig = this.waveSystem.waveConfig;
+            
+            if (waveConfig) {
+                // Spawn enemies based on wave config
+                const enemiesRemaining = waveConfig.enemyCount - this.waveSystem.enemiesSpawned;
+                
+                if (enemiesRemaining > 0) {
+                    // Check if it's time to spawn next enemy
+                    const timeSinceLastSpawn = this.gameTime - this.lastSpawnTime;
+                    
+                    // For wave 5, spawn is instant (already handled in startWave)
+                    if (waveConfig.spawnInterval > 0 && timeSinceLastSpawn >= waveConfig.spawnInterval) {
+                        this.enemySystem.spawnWaveEnemy(waveConfig, this.trees);
+                        this.lastSpawnTime = this.gameTime;
+                    }
+                }
+                
+                // Update UI with wave progress
+                const progress = this.waveSystem.getWaveProgress();
+                this.uiManager.updateWaveInfo(
+                    this.waveSystem.getCurrentWave(),
+                    progress.killed,
+                    progress.total
+                );
+                
+                // Check wave completion (all spawned, all killed, and no active enemies)
+                if (this.waveSystem.isWaveComplete() && 
+                    this.enemySystem.getEnemies().length === 0) {
+                    this.completeWave();
+                }
+            }
         }
         
-        // Periodic enemy spawning (every spawnInterval seconds) - only during night
-        if (this.daySystem.isNight() && this.gameTime - this.lastSpawnTime >= this.spawnInterval) {
-            this.enemySystem.spawnFromRandomSide(this.trees);
-            this.lastSpawnTime = this.gameTime;
+        // Check for game over (totem destroyed)
+        if (this.forestTotem.isDestroyed()) {
+            this.handleGameOver();
         }
     }
     
@@ -220,8 +288,35 @@ export class Game {
             if (nearestTree.cut()) {
                 // Add wood resource
                 this.resourceSystem.addWood(1);
+                // Track tree cut for miceAlert calculation
+                this.daySystem.incrementTreesCut();
             }
         }
+    }
+    
+    completeWave() {
+        const waveNumber = this.waveSystem.getCurrentWave();
+        
+        // Check for win condition
+        if (this.waveSystem.hasWon()) {
+            this.handleWin();
+            return;
+        }
+        
+        // Move to next day (which will start next wave)
+        this.daySystem.startNextDay();
+    }
+    
+    handleWin() {
+        this.hasWon = true;
+        this.uiManager.showWinScreen();
+        // Stop enemy spawning
+        // Hide UI and frame map (per design doc) - can be implemented later
+    }
+    
+    handleGameOver() {
+        this.isRunning = false;
+        this.uiManager.showGameOverScreen();
     }
     
     render() {
