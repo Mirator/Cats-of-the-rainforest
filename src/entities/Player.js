@@ -21,25 +21,47 @@ export class Player {
         
         // Color properties
         this.bodyColor = null;
+        this.legColor = null;
+        this.headColor = null;
         this.maskColor = null;
         
-        // Body color palette (cat-friendly colors)
+        // Body color palette (cat-friendly colors - avoiding dark colors, larger and more diverse)
         this.bodyColorPalette = [
-            0xff8c42, 0xff6b35, 0xffa500, // Orange/Ginger
-            0x8b4513, 0xa0522d, 0xcd853f, // Brown/Tabby
-            0x808080, 0x696969, 0x778899, // Gray
-            0xfff8dc, 0xfffdd0,           // Cream
-            0xff6b6b, 0xffa07a            // Calico patterns
+            // Orange/Ginger tones (warm and vibrant)
+            0xff8c42, 0xff6b35, 0xffa500, 0xffb347, 0xffcc99, 0xffd700,
+            // Brown/Tabby tones (medium to light browns)
+            0xcd853f, 0xd2691e, 0xdaa520, 0xdeb887, 0xf4a460, 0xe6b887,
+            // Gray tones (light to medium grays)
+            0xd3d3d3, 0xc0c0c0, 0xa9a9a9, 0xbcbcbc, 0xdcdcdc, 0xe0e0e0,
+            // Cream/Beige tones (soft and light)
+            0xfff8dc, 0xfffdd0, 0xf5deb3, 0xfaf0e6, 0xfffef0, 0xfff8e7,
+            // Calico/Tortoiseshell patterns (warm mixed tones)
+            0xff6b6b, 0xffa07a, 0xffb6c1, 0xffc0cb, 0xffdab9, 0xffe4b5,
+            // Light pastels (soft and gentle)
+            0xffe4e1, 0xfff0f5, 0xf0e68c, 0xfffacd, 0xfff5ee, 0xfdf5e6,
+            // Sandy/Tan tones
+            0xf5deb3, 0xe6d3a3, 0xd2b48c, 0xc9a961, 0xd4af37, 0xe6c200,
+            // Light peach/apricot
+            0xffdab9, 0xffcccb, 0xffb6c1, 0xffa07a, 0xff8c69, 0xff7f50
         ];
         
         // Mask color palette (distinct from body, suitable for masks)
-        // No black colors - all colors have at least 0x20 in each RGB channel
+        // Avoiding dark colors - all colors are medium to bright
         this.maskColorPalette = [
-            0x2a3a5e, 0x263a5e, 0x1f4a80, // Deep colors (replaced near-black with dark blues)
-            0x8b0000, 0x4b0082, 0x2d5016, // Rich colors
-            0xff1493, 0x00ced1, 0xff6347, // Vibrant colors
-            0x654321, 0x556b2f, 0x6b4423, // Earth tones
-            0x4682b4, 0x708090, 0x3f5f5f  // Metallic (replaced 0x2f4f4f with lighter shade)
+            // Medium blues and teals
+            0x4682b4, 0x5f9ea0, 0x40e0d0, 0x00ced1, 0x87ceeb, 0x6495ed,
+            // Rich reds and pinks (medium brightness)
+            0xdc143c, 0xff1493, 0xff6347, 0xff69b4, 0xff7f50, 0xcd5c5c,
+            // Purples and violets
+            0x9370db, 0xba55d3, 0xda70d6, 0x8a2be2, 0x9b59b6, 0x7b68ee,
+            // Earth tones (medium brightness)
+            0x8b7355, 0xa0826d, 0xb8860b, 0xcd853f, 0xdaa520, 0xd2691e,
+            // Greens (medium to bright)
+            0x6b8e23, 0x9acd32, 0x7cfc00, 0x32cd32, 0x3cb371, 0x66cdaa,
+            // Oranges and corals
+            0xff8c00, 0xff7f50, 0xff6347, 0xff4500, 0xff6b47, 0xff8c69,
+            // Yellows and golds
+            0xffd700, 0xffa500, 0xffb347, 0xdaa520, 0xb8860b, 0xd4af37
         ];
         
         // Create placeholder mesh while loading
@@ -67,7 +89,7 @@ export class Player {
             } else if (pathname.startsWith('/Cats-of-the-rainforest')) {
                 baseUrl = '/Cats-of-the-rainforest/';
             }
-            const gltf = await loader.loadAsync(`${baseUrl}assets/models/cat2.glb`);
+            const gltf = await loader.loadAsync(`${baseUrl}assets/models/cat3.glb`);
             
             // Get the model from the scene
             const model = gltf.scene;
@@ -300,14 +322,43 @@ export class Player {
         }
     }
     
+    // Helper function to create a slightly varied color from a base color
+    createColorVariation(baseColor, variationAmount = 0.15) {
+        // Convert hex to RGB
+        const r = (baseColor >> 16) & 0xff;
+        const g = (baseColor >> 8) & 0xff;
+        const b = baseColor & 0xff;
+        
+        // Create variation (slightly lighter or darker, but not too much)
+        const variation = (Math.random() - 0.5) * 2 * variationAmount; // -variationAmount to +variationAmount
+        const newR = Math.max(0, Math.min(255, Math.round(r * (1 + variation))));
+        const newG = Math.max(0, Math.min(255, Math.round(g * (1 + variation))));
+        const newB = Math.max(0, Math.min(255, Math.round(b * (1 + variation))));
+        
+        return (newR << 16) | (newG << 8) | newB;
+    }
+    
     selectRandomColors() {
         // Select random body color
         const bodyIndex = Math.floor(Math.random() * this.bodyColorPalette.length);
         this.bodyColor = this.bodyColorPalette[bodyIndex];
         
+        // Create slightly different colors for legs and head (subtle variation)
+        // Legs: slightly darker or lighter (10-15% variation)
+        this.legColor = this.createColorVariation(this.bodyColor, 0.12);
+        
+        // Head: slightly different tone (10-15% variation, but different from legs)
+        this.headColor = this.createColorVariation(this.bodyColor, 0.12);
+        // Ensure head color is different from leg color
+        let attempts = 0;
+        while (this.headColor === this.legColor && attempts < 5) {
+            this.headColor = this.createColorVariation(this.bodyColor, 0.12);
+            attempts++;
+        }
+        
         // Select random mask color, ensuring it's different from body color
         let maskIndex;
-        let attempts = 0;
+        attempts = 0;
         do {
             maskIndex = Math.floor(Math.random() * this.maskColorPalette.length);
             this.maskColor = this.maskColorPalette[maskIndex];
@@ -329,8 +380,31 @@ export class Player {
                     child.name.toLowerCase().includes('mask')
                 );
                 
-                // Apply color based on whether it's mask or body
-                const targetColor = isMask ? this.maskColor : this.bodyColor;
+                // Check if this is a leg
+                const isLeg = this.legMeshes.some(leg => 
+                    child === leg || 
+                    (leg.isGroup && leg.children.includes(child)) ||
+                    child.name.toLowerCase().includes('leg') ||
+                    child.name.toLowerCase().includes('foot') ||
+                    child.name.toLowerCase().includes('paw')
+                );
+                
+                // Check if this is the head
+                const isHead = this.headMesh && (
+                    child === this.headMesh || 
+                    (this.headMesh.isGroup && this.headMesh.children.includes(child)) ||
+                    (child.name.toLowerCase().includes('head') && !child.name.toLowerCase().includes('mask'))
+                );
+                
+                // Determine target color based on part
+                let targetColor = this.bodyColor; // Default to body color
+                if (isMask) {
+                    targetColor = this.maskColor;
+                } else if (isLeg) {
+                    targetColor = this.legColor;
+                } else if (isHead) {
+                    targetColor = this.headColor;
+                }
                 
                 // Handle both single material and material arrays
                 const materials = Array.isArray(child.material) ? child.material : [child.material];
