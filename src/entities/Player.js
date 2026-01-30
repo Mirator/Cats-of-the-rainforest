@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PlayerModel } from './PlayerModel';
+import { PlayerModel } from './PlayerModel.js';
 
 export class Player {
     constructor(x, z) {
