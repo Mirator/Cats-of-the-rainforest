@@ -1,13 +1,14 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { BaseModel } from './BaseModel.js';
 
-export class PlayerModel {
+export class PlayerModel extends BaseModel {
     constructor(position, { onModelLoaded } = {}) {
-        this.position = position;
-        this.mesh = null;
-        this.yOffset = 0.5;
-        this.modelLoaded = false;
-        this.onModelLoaded = onModelLoaded;
+        super(position, {
+            onModelLoaded,
+            modelPath: 'cat3.glb',
+            placeholderColor: 0xff8c42,
+            scale: 0.5
+        });
 
         // Animation properties
         this.animationTime = 0;
@@ -63,105 +64,13 @@ export class PlayerModel {
             0xffd700, 0xffa500, 0xffb347, 0xdaa520, 0xb8860b, 0xd4af37
         ];
 
-        this.createPlaceholder();
     }
 
-    init() {
-        return this.loadModel();
-    }
-
-    getMesh() {
-        return this.mesh;
-    }
-
-    getYOffset() {
-        return this.yOffset;
-    }
-
-    createPlaceholder() {
-        const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-        const material = new THREE.MeshStandardMaterial({ color: 0xff8c42 });
-        this.mesh = new THREE.Mesh(geometry, material);
-        this.mesh.position.copy(this.position);
-    }
-
-    async loadModel() {
-        const loader = new GLTFLoader();
-
-        try {
-            const pathname = window.location.pathname;
-            let baseUrl = '/';
-            if (pathname.includes('/Cats-of-the-rainforest/')) {
-                baseUrl = '/Cats-of-the-rainforest/';
-            } else if (pathname.startsWith('/Cats-of-the-rainforest')) {
-                baseUrl = '/Cats-of-the-rainforest/';
-            }
-            const gltf = await loader.loadAsync(`${baseUrl}assets/models/cat3.glb`);
-
-            const model = gltf.scene;
-
-            model.traverse((child) => {
-                if (child.isMesh) {
-                    child.castShadow = true;
-                    child.receiveShadow = true;
-
-                    const materials = Array.isArray(child.material) ? child.material : [child.material];
-                    materials.forEach((material, index) => {
-                        if (material) {
-                            if (!material.userData.isCloned) {
-                                const clonedMaterial = material.clone();
-                                clonedMaterial.userData.isCloned = true;
-                                clonedMaterial.flatShading = true;
-
-                                if (Array.isArray(child.material)) {
-                                    child.material[index] = clonedMaterial;
-                                } else {
-                                    child.material = clonedMaterial;
-                                }
-                            } else {
-                                material.flatShading = true;
-                            }
-                        }
-                    });
-                }
-            });
-
-            model.scale.set(0.5, 0.5, 0.5);
-
-            const box = new THREE.Box3().setFromObject(model);
-
-            if (box.min.y < 0) {
-                this.yOffset = Math.abs(box.min.y);
-            } else {
-                this.yOffset = 0;
-            }
-
-            model.position.set(this.position.x, this.position.y + this.yOffset, this.position.z);
-
-            const parentScene = this.mesh?.parent;
-
-            if (this.mesh && this.mesh.parent) {
-                this.mesh.parent.remove(this.mesh);
-            }
-
-            this.mesh = model;
-            this.modelLoaded = true;
-
-            this.findModelParts();
-
-            this.selectRandomColors();
-            this.applyColors();
-
-            if (parentScene) {
-                parentScene.add(this.mesh);
-            }
-
-            if (this.onModelLoaded) {
-                this.onModelLoaded({ mesh: this.mesh, yOffset: this.yOffset });
-            }
-        } catch (error) {
-            console.error('Error loading cat model:', error);
-        }
+    onModelLoadedInternal() {
+        // Cat-specific setup after model loads
+        this.findModelParts();
+        this.selectRandomColors();
+        this.applyColors();
     }
 
     findModelParts() {

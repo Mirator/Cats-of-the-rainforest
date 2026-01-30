@@ -3,6 +3,8 @@ import { InputManager } from './InputManager.js';
 import { MapSystem } from '../systems/MapSystem.js';
 import { ResourceSystem } from '../systems/ResourceSystem.js';
 import { DaySystem, DayState } from '../systems/DaySystem.js';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js';
+import { EnemySystem } from '../systems/EnemySystem.js';
 import { Player } from '../entities/Player.js';
 import { Tree } from '../entities/Tree.js';
 import { ForestTotem } from '../entities/ForestTotem.js';
@@ -17,13 +19,19 @@ export class Game {
         this.resourceSystem = null;
         this.daySystem = null;
         this.uiManager = null;
+        this.pathfindingSystem = null;
+        this.enemySystem = null;
         
         this.player = null;
         this.trees = [];
         this.forestTotem = null;
+        this.treesChanged = false; // Track if trees changed for pathfinding update
         
         this.lastTime = 0;
         this.isRunning = false;
+        this.lastSpawnTime = 0;
+        this.spawnInterval = 10.0; // Spawn enemies every 10 seconds
+        this.gameTime = 0; // Total game time in seconds
         
         this.init();
     }
@@ -58,6 +66,17 @@ export class Game {
         // Generate trees
         this.generateTrees();
         
+        // Initialize pathfinding system (after trees are generated)
+        const totemPos = this.forestTotem.getPosition();
+        this.pathfindingSystem = new PathfindingSystem(
+            this.mapSystem,
+            totemPos,
+            this.trees
+        );
+        
+        // Initialize enemy system
+        this.enemySystem = new EnemySystem(this.mapSystem, this.sceneManager);
+        
         // Setup UI callbacks
         this.setupUICallbacks();
         
@@ -72,6 +91,11 @@ export class Game {
             this.uiManager.setEndDayEnabled(dayInfo.state === DayState.DAY);
             // Update visual environment based on day/night state
             this.sceneManager.updateDayNightVisuals(dayInfo.state);
+            
+            // Spawn enemies when night starts
+            if (dayInfo.state === DayState.NIGHT) {
+                this.enemySystem.spawnFromAllSides(this.trees);
+            }
         });
         
         // Set initial day visuals
@@ -123,6 +147,9 @@ export class Game {
     }
     
     update(deltaTime) {
+        // Update game time
+        this.gameTime += deltaTime;
+        
         // Update input
         this.inputManager.update();
         
@@ -137,7 +164,8 @@ export class Game {
             this.handleTreeCutting();
         }
         
-        // Remove cut trees
+        // Remove cut trees and mark trees as changed
+        const treesBefore = this.trees.length;
         this.trees = this.trees.filter(tree => {
             if (tree.isCut) {
                 tree.remove();
@@ -146,6 +174,27 @@ export class Game {
             }
             return true;
         });
+        
+        // Update pathfinding if trees changed
+        if (this.trees.length !== treesBefore || this.treesChanged) {
+            const totemPos = this.forestTotem.getPosition();
+            this.pathfindingSystem.update(this.trees, totemPos);
+            this.treesChanged = false;
+        }
+        
+        // Update enemy system
+        this.enemySystem.update(deltaTime, this.pathfindingSystem, this.forestTotem, this.trees);
+        
+        // Check if all enemies are dead and it's night - end night
+        if (this.daySystem.isNight() && this.enemySystem.getEnemies().length === 0) {
+            this.daySystem.startNextDay();
+        }
+        
+        // Periodic enemy spawning (every spawnInterval seconds) - only during night
+        if (this.daySystem.isNight() && this.gameTime - this.lastSpawnTime >= this.spawnInterval) {
+            this.enemySystem.spawnFromRandomSide(this.trees);
+            this.lastSpawnTime = this.gameTime;
+        }
     }
     
     handleTreeCutting() {
