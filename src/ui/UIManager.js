@@ -4,8 +4,15 @@ export class UIManager {
         this.resourceDisplay = null;
         this.endDayButton = null;
         this.dayDisplay = null;
+        this.edgeIndicators = {
+            north: null,
+            south: null,
+            east: null,
+            west: null
+        };
         
         this.createUI();
+        this.createEdgeIndicators();
     }
     
     createUI() {
@@ -90,6 +97,128 @@ export class UIManager {
         this.container.appendChild(this.endDayButton);
         
         document.body.appendChild(this.container);
+    }
+    
+    createEdgeIndicators() {
+        // Create red edge indicators for each direction
+        const edgeWidth = 8; // Width of the red indicator in pixels
+        const directions = ['north', 'south', 'east', 'west'];
+        
+        directions.forEach(direction => {
+            const indicator = document.createElement('div');
+            indicator.id = `edge-indicator-${direction}`;
+            indicator.style.cssText = `
+                position: fixed;
+                background: rgba(255, 0, 0, 0.6);
+                pointer-events: none;
+                z-index: 1500;
+                transition: opacity 0.2s;
+                opacity: 0;
+            `;
+            
+            switch (direction) {
+                case 'north':
+                    indicator.style.top = '0';
+                    indicator.style.left = '0';
+                    indicator.style.width = '100%';
+                    indicator.style.height = `${edgeWidth}px`;
+                    break;
+                case 'south':
+                    indicator.style.bottom = '0';
+                    indicator.style.left = '0';
+                    indicator.style.width = '100%';
+                    indicator.style.height = `${edgeWidth}px`;
+                    break;
+                case 'east':
+                    indicator.style.top = '0';
+                    indicator.style.right = '0';
+                    indicator.style.width = `${edgeWidth}px`;
+                    indicator.style.height = '100%';
+                    break;
+                case 'west':
+                    indicator.style.top = '0';
+                    indicator.style.left = '0';
+                    indicator.style.width = `${edgeWidth}px`;
+                    indicator.style.height = '100%';
+                    break;
+            }
+            
+            this.edgeIndicators[direction] = indicator;
+            document.body.appendChild(indicator);
+        });
+    }
+    
+    updateEnemyDirectionIndicators(enemies, camera, playerPosition) {
+        if (!enemies || enemies.length === 0 || !camera || !playerPosition) {
+            // Hide all indicators if no enemies or missing data
+            Object.values(this.edgeIndicators).forEach(indicator => {
+                if (indicator) indicator.style.opacity = '0';
+            });
+            return;
+        }
+        
+        // Track which directions have off-screen enemies
+        const activeDirections = {
+            north: false,
+            south: false,
+            east: false,
+            west: false
+        };
+        
+        // Check each enemy
+        enemies.forEach(enemy => {
+            if (enemy.isDestroyed || !enemy.position) return;
+            
+            // Project enemy position to screen space
+            const enemyWorldPos = enemy.position.clone();
+            enemyWorldPos.project(camera);
+            
+            // Check if enemy is off-screen (outside viewport)
+            const margin = 0.1; // Margin to account for edge cases
+            const isOffScreen = 
+                enemyWorldPos.x < -1 - margin || enemyWorldPos.x > 1 + margin ||
+                enemyWorldPos.y < -1 - margin || enemyWorldPos.y > 1 + margin ||
+                enemyWorldPos.z < -1 || enemyWorldPos.z > 1; // Behind camera or too far
+            
+            if (isOffScreen) {
+                // Calculate direction from player to enemy in world space
+                // Note: In 3D space, we need to consider the camera's view direction
+                // For a top-down/isometric view, we can use world space coordinates
+                const dx = enemy.position.x - playerPosition.x;
+                const dz = enemy.position.z - playerPosition.z;
+                
+                // Determine which edge is closest based on the dominant direction
+                const absDx = Math.abs(dx);
+                const absDz = Math.abs(dz);
+                
+                // Use a threshold to determine primary direction
+                if (absDz > absDx * 0.7) {
+                    // North or South (Z-axis is primary)
+                    if (dz < 0) {
+                        activeDirections.north = true;
+                    } else {
+                        activeDirections.south = true;
+                    }
+                }
+                
+                if (absDx > absDz * 0.7) {
+                    // East or West (X-axis is primary)
+                    if (dx > 0) {
+                        activeDirections.east = true;
+                    } else {
+                        activeDirections.west = true;
+                    }
+                }
+            }
+        });
+        
+        // Update indicator visibility
+        Object.keys(activeDirections).forEach(direction => {
+            const indicator = this.edgeIndicators[direction];
+            if (indicator) {
+                indicator.style.opacity = activeDirections[direction] ? '1' : '0';
+            }
+        });
     }
     
     updateResources(food, wood) {

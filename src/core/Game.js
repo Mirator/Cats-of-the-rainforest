@@ -136,13 +136,16 @@ export class Game {
         // Update UI
         this.uiManager.updateWaveInfo(waveNumber, 0, waveConfig.enemyCount);
         
-        // Spawn initial enemies based on wave config
-        // For wave 5 (boss), spawn immediately
+        // Set lastSpawnTime so first enemy spawns after 2 seconds
+        // For wave 5 (spawnInterval = 0), we'll handle it specially in the update loop
         if (waveNumber === 5) {
-            this.enemySystem.spawnWaveEnemy(waveConfig, this.trees);
+            // For wave 5, set to spawn after 2 seconds
+            this.lastSpawnTime = this.gameTime - 2.0;
         } else {
-            // For other waves, start spawning periodically
-            this.lastSpawnTime = this.gameTime;
+            // For other waves, set lastSpawnTime so first spawn happens after 2 seconds
+            // timeSinceLastSpawn = gameTime - (gameTime - (spawnInterval - 2)) = spawnInterval - 2
+            // After 2 seconds: timeSinceLastSpawn = spawnInterval, triggering spawn
+            this.lastSpawnTime = this.gameTime - (waveConfig.spawnInterval - 2.0);
         }
     }
     
@@ -224,6 +227,17 @@ export class Game {
         // Update enemy system
         this.enemySystem.update(deltaTime, this.pathfindingSystem, this.forestTotem, this.trees);
         
+        // Update enemy direction indicators (red edges for off-screen enemies)
+        if (this.daySystem.isNight()) {
+            const enemies = this.enemySystem.getEnemies();
+            const camera = this.sceneManager.camera;
+            const playerPos = this.player.getPosition();
+            this.uiManager.updateEnemyDirectionIndicators(enemies, camera, playerPos);
+        } else {
+            // Hide all indicators during day
+            this.uiManager.updateEnemyDirectionIndicators([], null, null);
+        }
+        
         // Handle wave spawning and completion
         if (this.daySystem.isNight() && !this.hasWon) {
             const waveConfig = this.waveSystem.waveConfig;
@@ -236,10 +250,18 @@ export class Game {
                     // Check if it's time to spawn next enemy
                     const timeSinceLastSpawn = this.gameTime - this.lastSpawnTime;
                     
-                    // For wave 5, spawn is instant (already handled in startWave)
-                    if (waveConfig.spawnInterval > 0 && timeSinceLastSpawn >= waveConfig.spawnInterval) {
-                        this.enemySystem.spawnWaveEnemy(waveConfig, this.trees);
-                        this.lastSpawnTime = this.gameTime;
+                    // For wave 5 (boss), spawn after 2 seconds, then done
+                    if (this.waveSystem.getCurrentWave() === 5) {
+                        if (timeSinceLastSpawn >= 2.0) {
+                            this.enemySystem.spawnWaveEnemy(waveConfig, this.trees);
+                            this.lastSpawnTime = this.gameTime; // Prevent multiple spawns
+                        }
+                    } else {
+                        // For other waves, spawn based on interval (first spawn after 2 seconds)
+                        if (timeSinceLastSpawn >= waveConfig.spawnInterval) {
+                            this.enemySystem.spawnWaveEnemy(waveConfig, this.trees);
+                            this.lastSpawnTime = this.gameTime;
+                        }
                     }
                 }
                 
