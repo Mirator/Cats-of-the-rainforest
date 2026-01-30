@@ -129,8 +129,8 @@ export class Game {
         // Update player
         this.player.update(deltaTime, this.inputManager, this.mapSystem);
         
-        // Update camera to follow player
-        this.sceneManager.updateCamera(this.player.getPosition());
+        // Update camera to follow player (pass mapSystem for boundary slowdown)
+        this.sceneManager.updateCamera(this.player.getPosition(), this.mapSystem);
         
         // Handle tree cutting
         if (this.inputManager.isActionPressed()) {

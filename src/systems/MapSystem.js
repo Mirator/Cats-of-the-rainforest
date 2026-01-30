@@ -6,13 +6,30 @@ export class MapSystem {
         this.mapSize = 120;
         this.boundary = this.mapSize / 2;
         this.ground = null;
+        this.extendedGround = null;
         this.boundaries = [];
+        this.borderTerrain = [];
         
         this.createGround();
         this.createBoundaries();
     }
     
     createGround() {
+        // Create extended ground plane (240x240) - darker forest color
+        const extendedSize = this.mapSize * 2;
+        const extendedGeometry = new THREE.PlaneGeometry(extendedSize, extendedSize);
+        const extendedMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x3a5c49, // Darker forest green
+            roughness: 0.8,
+            flatShading: true
+        });
+        this.extendedGround = new THREE.Mesh(extendedGeometry, extendedMaterial);
+        this.extendedGround.rotation.x = -Math.PI / 2;
+        this.extendedGround.position.y = -0.01; // Slightly below playable ground
+        this.extendedGround.receiveShadow = true;
+        this.scene.add(this.extendedGround);
+        
+        // Create playable ground plane (120x120) - current green color
         const geometry = new THREE.PlaneGeometry(this.mapSize, this.mapSize);
         const material = new THREE.MeshStandardMaterial({ 
             color: 0x4a7c59,

@@ -36,11 +36,11 @@ export class SceneManager {
         this.directionalLight.castShadow = true;
         this.scene.add(this.directionalLight);
         
-        // Add fog for atmospheric effect
-        this.scene.fog = new THREE.Fog(0x87CEEB, 50, 200);
+        // Add fog for atmospheric effect (terrain-matching green)
+        this.scene.fog = new THREE.Fog(0x5a7c69, 50, 200);
         
-        // Set initial day background
-        this.scene.background = new THREE.Color(0x87CEEB);
+        // Set initial day background (forest green instead of blue sky)
+        this.scene.background = new THREE.Color(0x5a7c69);
         
         // Handle window resize
         window.addEventListener('resize', () => this.onWindowResize());
@@ -58,7 +58,7 @@ export class SceneManager {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
     }
     
-    updateCamera(targetPosition) {
+    updateCamera(targetPosition, mapSystem) {
         if (!targetPosition) return;
         
         // Calculate camera position relative to player
@@ -66,8 +66,40 @@ export class SceneManager {
         cameraPos.copy(targetPosition);
         cameraPos.add(this.cameraOffset);
         
-        // Smoothly move camera to follow player
-        this.camera.position.lerp(cameraPos, 0.1);
+        // Calculate slowdown factor based on distance to boundary
+        let slowdownFactor = 1.0;
+        if (mapSystem) {
+            const boundary = mapSystem.getBoundary();
+            const slowdownZone = 30; // Start slowing down 30 units before boundary
+            
+            // Calculate distance from center
+            const distanceFromCenter = Math.sqrt(
+                targetPosition.x * targetPosition.x + 
+                targetPosition.z * targetPosition.z
+            );
+            
+            // Calculate distance to boundary
+            const distanceToBoundary = boundary - distanceFromCenter;
+            
+            // Calculate slowdown factor
+            if (distanceToBoundary <= 0) {
+                // At or beyond boundary - camera stops
+                slowdownFactor = 0.0;
+            } else if (distanceToBoundary < slowdownZone) {
+                // Within slowdown zone - gradual slowdown
+                slowdownFactor = distanceToBoundary / slowdownZone;
+            } else {
+                // Far from boundary - full speed
+                slowdownFactor = 1.0;
+            }
+        }
+        
+        // Apply slowdown factor to lerp speed (base speed is 0.1)
+        const baseLerpSpeed = 0.1;
+        const lerpSpeed = baseLerpSpeed * slowdownFactor;
+        
+        // Smoothly move camera to follow player (with slowdown near boundaries)
+        this.camera.position.lerp(cameraPos, lerpSpeed);
         
         // Make camera look at player position
         this.camera.lookAt(targetPosition);
@@ -92,19 +124,19 @@ export class SceneManager {
     
     updateDayNightVisuals(state) {
         if (state === 'day') {
-            // Day settings: bright and clear
+            // Day settings: bright and clear (terrain-matching green)
             this.ambientLight.intensity = 0.6;
             this.directionalLight.intensity = 0.8;
-            this.scene.background = new THREE.Color(0x87CEEB); // Sky blue
-            this.scene.fog.color.setHex(0x87CEEB); // Light fog
+            this.scene.background = new THREE.Color(0x5a7c69); // Forest green
+            this.scene.fog.color.setHex(0x5a7c69); // Light fog matching terrain
             this.scene.fog.near = 50;
             this.scene.fog.far = 200;
         } else if (state === 'night') {
-            // Night settings: dark and atmospheric (no black - minimum 0x20 per channel)
+            // Night settings: dark and atmospheric (dark forest green, no blue - minimum 0x20 per channel)
             this.ambientLight.intensity = 0.2;
             this.directionalLight.intensity = 0.3;
-            this.scene.background = new THREE.Color(0x2a2a4e); // Dark blue/purple (not black)
-            this.scene.fog.color.setHex(0x2a2a4e); // Darker fog
+            this.scene.background = new THREE.Color(0x2a3a2a); // Dark forest green (not black, no blue)
+            this.scene.fog.color.setHex(0x2a3a2a); // Darker fog matching terrain
             this.scene.fog.near = 30;
             this.scene.fog.far = 150;
         }
