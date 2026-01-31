@@ -7,6 +7,7 @@ export const VISUAL_CONFIG = {
     treeScale: 0.5,
     totemScale: 1.0,
     catDenScale: 1.0,
+    towerScale: 0.75,
     
     // Y offsets
     defaultYOffset: 0.5,

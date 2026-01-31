@@ -18,6 +18,7 @@ export class Player {
         this.attackCooldown = PLAYER_CONFIG.attackCooldown;
         this.lastAttackTime = 0;
         this.attackArc = PLAYER_CONFIG.attackArc;
+        this.lastFacingDirection = new THREE.Vector3(0, 0, 1); // Default forward direction (+Z, matches rotation.y=π)
         
         // Health properties
         this.maxHealth = PLAYER_CONFIG.maxHealth;
@@ -76,6 +77,15 @@ export class Player {
 
             const angle = Math.atan2(move.x, move.z) + Math.PI;
             this.mesh.rotation.y = angle;
+            
+            // Store facing direction for attack calculations
+            // In Three.js: rotation.y=0 faces -Z, rotation.y=π/2 faces -X, rotation.y=π faces +Z, rotation.y=3π/2 faces +X
+            // So forward = (-sin(rotationY), 0, cos(rotationY))
+            this.lastFacingDirection.set(
+                -Math.sin(angle),
+                0,
+                Math.cos(angle)
+            ).normalize();
         }
     }
 
@@ -188,6 +198,26 @@ export class Player {
         const hitEnemies = [];
         const playerPos = this.position;
         
+        // Calculate forward direction from rotation angle
+        // Use stored direction if mesh rotation might be stale (when not moving)
+        let playerForward;
+        if (this.mesh && this.mesh.rotation.y !== undefined) {
+            const rotationY = this.mesh.rotation.y;
+            // Calculate forward direction directly from rotation
+            // In Three.js: rotation.y=0 faces -Z, rotation.y=π/2 faces -X, rotation.y=π faces +Z, rotation.y=3π/2 faces +X
+            // So forward = (-sin(rotationY), 0, cos(rotationY))
+            playerForward = new THREE.Vector3(
+                -Math.sin(rotationY),
+                0,
+                Math.cos(rotationY)
+            ).normalize();
+            // Update stored direction
+            this.lastFacingDirection.copy(playerForward);
+        } else {
+            // Use stored direction if mesh not available or rotation is stale
+            playerForward = this.lastFacingDirection.clone();
+        }
+        
         for (const enemy of enemies) {
             if (enemy.isDestroyed) continue;
             
@@ -198,26 +228,17 @@ export class Player {
             if (distance > this.attackRange) continue;
             
             // Check if enemy is within attack arc (in front of player)
-            if (this.mesh) {
-                const playerForward = new THREE.Vector3();
-                this.mesh.getWorldDirection(playerForward);
-                playerForward.y = 0;
-                playerForward.normalize();
-                
-                const toEnemy = new THREE.Vector3(
-                    enemyPos.x - playerPos.x,
-                    0,
-                    enemyPos.z - playerPos.z
-                ).normalize();
-                
-                const dot = playerForward.dot(toEnemy);
-                const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
-                
-                // Check if within attack arc (half arc on each side)
-                if (angle <= this.attackArc / 2) {
-                    hitEnemies.push(enemy);
-                }
-            } else {
+            const toEnemy = new THREE.Vector3(
+                enemyPos.x - playerPos.x,
+                0,
+                enemyPos.z - playerPos.z
+            ).normalize();
+            
+            const dot = playerForward.dot(toEnemy);
+            const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
+            
+            // Check if within attack arc (half arc on each side)
+            if (angle <= this.attackArc / 2) {
                 hitEnemies.push(enemy);
             }
         }
@@ -259,12 +280,16 @@ export class Player {
             return { attacked: false, hitCount: 0 };
         }
 
-        const closestEnemy = this.getClosestEnemyInRange(enemies);
-        if (closestEnemy) {
-            this.facePosition(closestEnemy.getPosition());
-        }
-        
+        // Check hit detection BEFORE facing enemy to prevent timing issues
         const hitEnemies = this.getEnemiesInRange(enemies);
+        
+        // Face the closest enemy if we hit something (for visual feedback)
+        if (hitEnemies.length > 0) {
+            const closestEnemy = this.getClosestEnemyInRange(enemies);
+            if (closestEnemy) {
+                this.facePosition(closestEnemy.getPosition());
+            }
+        }
         
         // Deal damage to all hit enemies
         for (const enemy of hitEnemies) {

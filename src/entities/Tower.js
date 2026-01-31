@@ -7,8 +7,9 @@ export class Tower extends BaseModel {
     constructor(x, z) {
         const position = new THREE.Vector3(x, 0, z);
         super(position, {
+            modelPath: 'tower.glb',
             placeholderColor: VISUAL_CONFIG.towerPlaceholderColor,
-            scale: VISUAL_CONFIG.catScale
+            scale: VISUAL_CONFIG.towerScale
         });
         
         this.size = BUILDING_CONFIG.tower.size;
@@ -33,10 +34,115 @@ export class Tower extends BaseModel {
         this.lastAttackTime = 0;
         this.targetEnemy = null;
         this.projectiles = [];
+
+        // Vine animation
+        this.vineMeshes = [];
+        this.vineTime = 0;
+
+        // Facing adjustment (match totem orientation)
+        this.facingOffset = 0;
+        this.facingAngle = 0;
     }
     
     onModelLoadedInternal() {
         // Tower specific setup after model loads
+        this.findVineMeshes();
+        this.applyColors();
+        this.applyFacing();
+    }
+
+    findVineMeshes() {
+        this.vineMeshes = [];
+        if (!this.mesh) return;
+
+        this.mesh.traverse((child) => {
+            if (!child.isMesh) return;
+            const name = child.name.toLowerCase();
+            if (name.startsWith('vine_')) {
+                child.userData.baseRotation = child.rotation.clone();
+                child.userData.basePosition = child.position.clone();
+                this.vineMeshes.push(child);
+            }
+        });
+    }
+
+    applyColors() {
+        if (!this.mesh) return;
+
+        const palette = {
+            base: 0x6f4a2d,
+            core: 0x8a5a36,
+            platform: 0x6a3e24,
+            ear: 0xb37a4a,
+            vine: 0x6fbf5a
+        };
+
+        this.mesh.traverse((child) => {
+            if (!child.isMesh || !child.material) return;
+            const name = child.name.toLowerCase();
+
+            let targetColor = null;
+            if (name.startsWith('vine_') || name.includes('vine')) {
+                targetColor = palette.vine;
+            } else if (name.includes('ear')) {
+                targetColor = palette.ear;
+            } else if (name.includes('platform')) {
+                targetColor = palette.platform;
+            } else if (name.includes('core')) {
+                targetColor = palette.core;
+            } else if (name.includes('base')) {
+                targetColor = palette.base;
+            }
+
+            if (targetColor === null) return;
+
+            const materials = Array.isArray(child.material) ? child.material : [child.material];
+            materials.forEach((material, index) => {
+                if (!material) return;
+                let materialToUse = material;
+
+                if (!material.userData.isCloned) {
+                    const clonedMaterial = material.clone();
+                    clonedMaterial.userData.isCloned = true;
+                    materialToUse = clonedMaterial;
+
+                    if (Array.isArray(child.material)) {
+                        child.material[index] = clonedMaterial;
+                    } else {
+                        child.material = clonedMaterial;
+                    }
+                }
+
+                if (materialToUse.color) {
+                    materialToUse.color.setHex(targetColor);
+                }
+            });
+        });
+    }
+
+    applyFacing() {
+        if (!this.mesh) return;
+        this.mesh.rotation.y = this.facingAngle;
+    }
+
+    setFacingAngle(angle) {
+        this.facingAngle = angle + this.facingOffset;
+        this.applyFacing();
+    }
+
+    updateVines(deltaTime) {
+        if (!this.modelLoaded || this.vineMeshes.length === 0) return;
+        this.vineTime += deltaTime;
+
+        this.vineMeshes.forEach((vine, index) => {
+            const phase = this.vineTime * 1.4 + index * 1.1;
+            const sway = Math.sin(phase) * 0.12;
+            const twist = Math.cos(phase * 0.7) * 0.06;
+            const baseRotation = vine.userData.baseRotation || vine.rotation;
+            vine.rotation.x = baseRotation.x + sway * 0.35;
+            vine.rotation.y = baseRotation.y + twist;
+            vine.rotation.z = baseRotation.z + sway;
+        });
     }
     
     getPosition() {
@@ -213,6 +319,7 @@ export class Tower extends BaseModel {
     }
     
     update(deltaTime, enemies, totemPosition) {
+        this.updateVines(deltaTime);
         this.updateProjectiles(deltaTime);
 
         if (!this.isActive()) {

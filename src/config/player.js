@@ -5,10 +5,10 @@ export const PLAYER_CONFIG = {
     yOffset: 0.5,
     
     // Combat properties
-    attackRange: 2.25,
+    attackRange: 2.5,
     attackDamage: 1,
-    attackCooldown: 0.8, // seconds
-    attackArc: 120 * (Math.PI / 180), // 120 degrees in radians
+    attackCooldown: 0.35, // seconds
+    attackArc: 140 * (Math.PI / 180), // 140 degrees in radians
     
     // Health properties
     maxHealth: 10,

@@ -524,6 +524,7 @@ export class Game {
                                    this.inputManager.isAnyKeyPressed(CONTROLS.attack);
                 if (attackInput) {
                     const result = this.player.attack(deltaTime, enemies);
+                    // Always show visual feedback when attack is attempted (even if on cooldown)
                     if (result.attacked) {
                         this.sceneManager.createSlashEffect(
                             this.player.getPosition(),

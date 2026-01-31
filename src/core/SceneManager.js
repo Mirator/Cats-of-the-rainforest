@@ -493,7 +493,7 @@ export class SceneManager {
 
         this.activeEffects.push({
             group,
-            duration: 0.25,
+            duration: 0.15,
             startTime: performance.now(),
             update: (effect, deltaTime, progress) => {
                 const scale = 0.9 + progress * 0.25;
