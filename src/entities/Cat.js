@@ -8,7 +8,7 @@ export class Cat extends BaseModel {
     constructor(x, z, playerMaskColor = null) {
         const position = new THREE.Vector3(x, 0, z);
         super(position, {
-            modelPath: 'cat5.glb',
+            modelPath: 'cat6.glb',
             placeholderColor: VISUAL_CONFIG.catPlaceholderColor,
             scale: VISUAL_CONFIG.catScale
         });

@@ -8,7 +8,7 @@ export class PlayerModel extends BaseModel {
     constructor(position, { onModelLoaded } = {}) {
         super(position, {
             onModelLoaded,
-            modelPath: 'cat5.glb',
+            modelPath: 'cat6.glb',
             placeholderColor: VISUAL_CONFIG.playerPlaceholderColor,
             scale: VISUAL_CONFIG.playerScale
         });
