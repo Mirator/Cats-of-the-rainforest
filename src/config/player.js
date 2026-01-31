@@ -1,14 +1,14 @@
 // Player configuration
 export const PLAYER_CONFIG = {
-    speed: 7.8,
+    speed: 6.6,
     interactionRange: 2.5,
     yOffset: 0.5,
     
     // Combat properties
-    attackRange: 2.5,
+    attackRange: 2.3,
     attackDamage: 1,
-    attackCooldown: 0.35, // seconds
-    attackArc: 140 * (Math.PI / 180), // 140 degrees in radians
+    attackCooldown: 0.42, // seconds
+    attackArc: 120 * (Math.PI / 180), // 120 degrees in radians
     
     // Health properties
     maxHealth: 10,

@@ -23,6 +23,7 @@ export class Cat extends BaseModel {
         this.reachedTarget = false;
         this.lastDayState = null;
         this.wanderTimer = 0;
+        this.guardCooldownTimer = 0;
         
         // Animation properties (similar to PlayerModel)
         this.animationTime = 0;
@@ -405,7 +406,8 @@ export class Cat extends BaseModel {
         totem = null,
         mapSystem = null,
         trees = [],
-        buildings = []
+        buildings = [],
+        enemies = []
     } = {}) {
         if (!this.mesh) return;
         
@@ -492,6 +494,30 @@ export class Cat extends BaseModel {
         this.mesh.position.x = this.position.x;
         this.mesh.position.y = this.position.y + this.yOffset;
         this.mesh.position.z = this.position.z;
+
+        // Passive guard: unassigned cats help during night near enemies
+        if (daySystem && typeof daySystem.isNight === 'function' && daySystem.isNight()) {
+            this.guardCooldownTimer = Math.max(0, this.guardCooldownTimer - deltaTime);
+            if (this.state !== 'assigned' && enemies && enemies.length > 0 && this.guardCooldownTimer <= 0) {
+                let closestEnemy = null;
+                let closestDistance = Infinity;
+                for (const enemy of enemies) {
+                    if (!enemy || enemy.isDestroyed) continue;
+                    const enemyPos = enemy.getPosition ? enemy.getPosition() : enemy.position;
+                    if (!enemyPos) continue;
+                    const distance = this.position.distanceTo(enemyPos);
+                    if (distance <= CAT_CONFIG.guardRange && distance < closestDistance) {
+                        closestDistance = distance;
+                        closestEnemy = enemy;
+                    }
+                }
+                
+                if (closestEnemy && typeof closestEnemy.takeDamage === 'function') {
+                    closestEnemy.takeDamage(CAT_CONFIG.guardDamage);
+                    this.guardCooldownTimer = CAT_CONFIG.guardCooldown;
+                }
+            }
+        }
         
         // Update animation
         this.updateAnimation(deltaTime, isMoving);

@@ -3,42 +3,46 @@ export const WAVE_CONFIG = {
     // Base wave configurations
     baseWaves: {
         1: {
-            enemyCount: 8,
+            enemyCount: 14,
             hpMultiplier: 1.0,
-            spawnInterval: 5.0,
+            spawnInterval: 2.4,
             enemyTypes: [
-                { type: 'regular', probability: 1.0 }
+                { type: 'regular', probability: 0.9 },
+                { type: 'fast', probability: 0.1 }
             ]
         },
         2: {
             enemyCount: 18,
             hpMultiplier: 1.2,
-            spawnInterval: 8.0,
+            spawnInterval: 2.3,
             enemyTypes: [
-                { type: 'regular', probability: 1.0 }
+                { type: 'regular', probability: 0.75 },
+                { type: 'fast', probability: 0.25 }
             ]
         },
         3: {
-            enemyCount: 25,
+            enemyCount: 22,
             hpMultiplier: 1.4,
-            spawnInterval: 6.0,
+            spawnInterval: 2.2,
             enemyTypes: [
-                { type: 'regular', probability: 0.7 },
-                { type: 'fast', probability: 0.3 }
+                { type: 'regular', probability: 0.6 },
+                { type: 'fast', probability: 0.35 },
+                { type: 'strong', probability: 0.05 }
             ]
         },
         4: {
-            enemyCount: 35,
-            hpMultiplier: 1.6,
-            spawnInterval: 5.0,
+            enemyCount: 26,
+            hpMultiplier: 1.7,
+            spawnInterval: 2.1,
             enemyTypes: [
-                { type: 'regular', probability: 0.6 },
-                { type: 'fast', probability: 0.4 }
+                { type: 'regular', probability: 0.45 },
+                { type: 'fast', probability: 0.45 },
+                { type: 'strong', probability: 0.1 }
             ]
         },
         5: {
             enemyCount: 1,
-            hpMultiplier: 5.0,
+            hpMultiplier: 12.0,
             spawnInterval: 0.0, // Instant spawn for boss
             enemyTypes: [
                 { type: 'strong', probability: 1.0 }
@@ -48,10 +52,10 @@ export const WAVE_CONFIG = {
     
     // MiceAlert scaling (only for waves 1-4)
     miceAlert: {
-        scalingMultiplier: 0.015,
-        maxExtraEnemies: 10
+        scalingMultiplier: 0.05,
+        maxExtraEnemies: 12
     },
     
     // Wave spawn delay
-    initialSpawnDelay: 2.0 // seconds before first enemy spawns
+    initialSpawnDelay: 1.5 // seconds before first enemy spawns
 };

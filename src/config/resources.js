@@ -5,6 +5,6 @@ export const RESOURCE_CONFIG = {
     initialWood: 0,
     
     // Stamina system
-    maxStamina: 10,
-    initialStamina: 10
+    maxStamina: 9,
+    initialStamina: 9
 };

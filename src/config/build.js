@@ -15,7 +15,7 @@ export const BUILD_CONFIG = {
         'tower': {
             id: 'tower',
             name: 'Tower',
-            woodCost: 5,
+            woodCost: 6,
             staminaCost: 1,
             icon: '', // No icon
             size: 1.5 // Collision radius
@@ -24,7 +24,7 @@ export const BUILD_CONFIG = {
     
     // First wave discounts (applies to first building of each type)
     firstWaveDiscounts: {
-        'cat-den': { wood: 2, stamina: 0 },  // Reduces from 3 to 1 wood
-        'tower': { wood: 4, stamina: 0 }    // Reduces from 5 to 1 wood
+        'cat-den': { wood: 1, stamina: 0 },  // Reduces from 3 to 2 wood
+        'tower': { wood: 3, stamina: 0 }    // Reduces from 6 to 3 wood
     }
 };

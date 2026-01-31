@@ -18,6 +18,11 @@ export const CAT_CONFIG = {
         max: 4.5
     },
     
+    // Passive guard behavior (unassigned cats at night)
+    guardRange: 3.0,
+    guardDamage: 1,
+    guardCooldown: 1.0,
+    
     // Animation speeds (same as player)
     legSpeed: 1.4,
     legAmplitude: 12.5 * (Math.PI / 180),

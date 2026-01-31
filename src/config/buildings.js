@@ -2,9 +2,9 @@
 export const BUILDING_CONFIG = {
     tower: {
         size: 1.5, // Collision radius
-        attackRange: 8.0,
-        attackDamage: 2,
-        attackCooldown: 1.5, // seconds
+        attackRange: 7.0,
+        attackDamage: 1.8,
+        attackCooldown: 1.4, // seconds
         projectileSpeed: 10.0, // units per second
         projectileRadius: 0.12,
         projectileHitRadius: 0.35,
@@ -17,7 +17,7 @@ export const BUILDING_CONFIG = {
         interactionRange: 2.5,
         interactionDuration: 1.5, // seconds to spawn cat
         spawnCost: {
-            food: 1,
+            food: 2,
             stamina: 1
         }
     },

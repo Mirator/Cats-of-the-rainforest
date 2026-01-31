@@ -6,7 +6,7 @@ export const MAP_CONFIG = {
     },
     
     // Tree generation
-    treeCount: 45,
+    treeCount: 35,
     centerRadius: 4.5, // Avoid center area for totem
     
     // Cat spawn position (relative to totem)

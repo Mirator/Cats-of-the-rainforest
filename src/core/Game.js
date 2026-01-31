@@ -590,7 +590,8 @@ export class Game {
                 totem: this.forestTotem,
                 mapSystem: this.mapSystem,
                 trees: this.trees,
-                buildings: this.buildings
+                buildings: this.buildings,
+                enemies: this.enemySystem ? this.enemySystem.getEnemies() : []
             });
         }
 
