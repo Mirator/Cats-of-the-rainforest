@@ -58,6 +58,10 @@ export class Game {
         this.gameTime = 0; // Total game time in seconds
         this.hasWon = false;
         
+        // Game state: 'menu', 'playing', 'paused'
+        this.gameState = 'menu';
+        this.pauseMenuTogglePressed = false;
+        
         this.init();
     }
     
@@ -383,6 +387,46 @@ export class Game {
             return;
         }
         
+        // Don't update game logic when in menu state
+        if (this.gameState === 'menu') {
+            // Still update input for any menu interactions
+            this.inputManager.update();
+            return;
+        }
+        
+        // Update input (needed for ESC key detection even when paused)
+        this.inputManager.update();
+        
+        // Handle pause menu toggle (ESC key, but not in build mode)
+        if (this.gameState === 'paused') {
+            // ESC closes pause menu when paused
+            if (this.inputManager.isAnyKeyPressed(CONTROLS.exitBuildMode)) {
+                if (!this.pauseMenuTogglePressed) {
+                    this.resumeGame();
+                    this.pauseMenuTogglePressed = true;
+                }
+            } else {
+                this.pauseMenuTogglePressed = false;
+            }
+            // Don't update game logic when paused
+            return;
+        }
+        
+        // Handle pause menu toggle when playing
+        if (this.gameState === 'playing') {
+            if (this.inputManager.isAnyKeyPressed(CONTROLS.exitBuildMode)) {
+                // Only open pause menu if not in build mode
+                if (!this.buildModeSystem.isActive()) {
+                    if (!this.pauseMenuTogglePressed) {
+                        this.pauseGame();
+                        this.pauseMenuTogglePressed = true;
+                    }
+                }
+            } else {
+                this.pauseMenuTogglePressed = false;
+            }
+        }
+        
         // Update game time
         this.gameTime += deltaTime;
         
@@ -391,9 +435,6 @@ export class Game {
         
         // Update visual effects
         this.sceneManager.update(deltaTime);
-        
-        // Update input
-        this.inputManager.update();
         
         // Handle build mode
         this.handleBuildMode(deltaTime);
@@ -1220,6 +1261,7 @@ export class Game {
         const deltaTime = Math.min((currentTime - this.lastTime) / 1000, 0.1);
         this.lastTime = currentTime;
         
+        // Always render (so pause menu is visible), but only update when not paused
         this.update(deltaTime);
         this.render();
         
@@ -1227,9 +1269,41 @@ export class Game {
     }
     
     start() {
+        // Show main menu instead of starting game immediately
+        this.gameState = 'menu';
         this.isRunning = true;
         this.lastTime = performance.now();
+        this.uiManager.showMainMenu(() => {
+            this.startGame();
+        });
+        // Start game loop for rendering (updates are skipped when in menu state)
         this.gameLoop(this.lastTime);
+    }
+    
+    startGame() {
+        this.gameState = 'playing';
+        this.uiManager.hideMainMenu();
+    }
+    
+    pauseGame() {
+        if (this.gameState === 'playing') {
+            this.gameState = 'paused';
+            this.uiManager.showPauseMenu(
+                () => this.resumeGame(),
+                () => this.restartGame()
+            );
+        }
+    }
+    
+    resumeGame() {
+        if (this.gameState === 'paused') {
+            this.gameState = 'playing';
+            this.uiManager.hidePauseMenu();
+        }
+    }
+    
+    restartGame() {
+        window.location.reload();
     }
     
     stop() {

@@ -16,6 +16,9 @@ export const CONTROLS = {
     confirmBuild: ['Enter', ' ', 'Space'],
     cancelBuild: ['Escape', 'RightClick'],
     
+    // Pause menu (ESC when not in build mode)
+    pauseMenu: ['Escape'],
+    
     // Build menu navigation
     selectItem1: ['1'],
     selectItem2: ['2'],
