@@ -445,7 +445,7 @@ export class UIManager {
     }
     
     // Win/Game Over screens
-    showWinScreen(screenshotDataURL = null) {
+    showWinScreen(screenshotDataURL = null, treesCutCount = 0) {
         const existingScreen = document.getElementById('win-screen');
         if (existingScreen) {
             existingScreen.remove();
@@ -471,9 +471,11 @@ export class UIManager {
             padding: 20px;
         `;
         
+        const treesCutLine = this.getTreesCutLine(treesCutCount, true);
         let content = `
             <h1 style="font-size: 48px; margin-bottom: 20px; color: #ffd700; text-align: center;">Victory!</h1>
             <p style="font-size: 24px; margin-bottom: 40px; text-align: center;">You have protected the rainforest!</p>
+            <p style="font-size: 18px; color: #ccc; text-align: center; max-width: 700px; margin-bottom: 20px;">${treesCutLine}</p>
         `;
         
         if (screenshotDataURL) {
@@ -519,14 +521,15 @@ export class UIManager {
             winScreen.appendChild(tempDiv);
             winScreen.appendChild(downloadButton);
         } else {
-            content += `<p style="font-size: 18px; color: #aaa; text-align: center;">The forest is safe from the masked mice.</p>`;
+            content += `<p style="font-size: 18px; color: #aaa; text-align: center;">The forest is safe from the mice.</p>`;
             winScreen.innerHTML = content;
         }
         
         document.body.appendChild(winScreen);
     }
     
-    showGameOverScreen() {
+    showGameOverScreen(treesCutCount = 0) {
+        const treesCutLine = this.getTreesCutLine(treesCutCount, false);
         const gameOverScreen = document.createElement('div');
         gameOverScreen.id = 'game-over-screen';
         gameOverScreen.style.cssText = `
@@ -576,9 +579,24 @@ export class UIManager {
             <h1 style="font-size: 48px; margin-bottom: 20px; color: #ff4444;">The Forest Has Fallen</h1>
             <p style="font-size: 24px; margin-bottom: 40px; text-align: center;">The Forest Totem has been destroyed!</p>
             <p style="font-size: 18px; color: #aaa; text-align: center; max-width: 600px; margin-bottom: 20px;">The masked mice have overwhelmed the forest. The totem crumbles, and darkness spreads across the land.</p>
+            <p style="font-size: 18px; color: #ccc; text-align: center; max-width: 700px; margin-bottom: 10px;">${treesCutLine}</p>
         `;
         gameOverScreen.appendChild(restartButton);
         document.body.appendChild(gameOverScreen);
+    }
+
+    getTreesCutLine(treesCutCount, isWin) {
+        if (isWin) {
+            const treeLabel = treesCutCount === 1 ? 'tree' : 'trees';
+            return `You cut ${treesCutCount} ${treeLabel}. Could you have cut fewer?`;
+        }
+        
+        if (treesCutCount === 0) {
+            return 'You cut zero trees, so either you were unskilled or you wanted to save nature by not killing it?';
+        }
+        
+        const treeLabel = treesCutCount === 1 ? 'tree' : 'trees';
+        return `You cut ${treesCutCount} ${treeLabel}. Maybe it wasn't enough, but maybe it was too much?`;
     }
     
     hideAllUI() {

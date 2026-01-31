@@ -1471,7 +1471,7 @@ export class Game {
             const screenshotDataURL = this.sceneManager.captureScreenshot();
             
             // Show win screen with screenshot
-            this.uiManager.showWinScreen(screenshotDataURL);
+            this.uiManager.showWinScreen(screenshotDataURL, this.treesCutCount);
         });
     }
     
@@ -1482,7 +1482,7 @@ export class Game {
         // The update loop will stop because isRunning is false
         
         // Show game over screen
-        this.uiManager.showGameOverScreen();
+        this.uiManager.showGameOverScreen(this.treesCutCount);
     }
     
     render() {

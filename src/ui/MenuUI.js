@@ -96,7 +96,7 @@ export class MenuUI {
         
         mainMenu.innerHTML = `
             <h1 style="font-size: 64px; margin-bottom: 20px; color: #ffd700; text-align: center;">Cats of the Rainforest</h1>
-            <p style="font-size: 24px; margin-bottom: 40px; text-align: center; color: #aaa;">Protect the forest from the masked mice</p>
+            <p style="font-size: 24px; margin-bottom: 40px; text-align: center; color: #aaa;">Protect the forest from the mice</p>
         `;
         mainMenu.appendChild(startButton);
         mainMenu.appendChild(controlsButton);
