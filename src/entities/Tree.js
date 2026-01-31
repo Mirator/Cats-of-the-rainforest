@@ -1,54 +1,23 @@
 import * as THREE from 'three';
 import { BaseModel } from './BaseModel.js';
-
-// Shared wind properties for all trees (synchronized direction)
-const WIND_DIRECTION = Math.PI / 4; // 45 degrees - same for all trees
-const WIND_SPEED = 0.8; // Wind animation speed
-const TREE_SWAY_AMPLITUDE = 3 * (Math.PI / 180); // 3 degrees in radians
-
-// Interaction and falling constants
-const INTERACTION_DURATION = 3.0; // 3 seconds to cut tree
-const FALL_DURATION = 0.8; // 0.8 seconds for fall animation
-const FALL_ANGLE = Math.PI / 2; // 90 degrees fall angle
-
-// Tree color palettes
-const TRUNK_COLORS = [
-    0x8b4513, // Saddle brown
-    0xa0522d, // Sienna
-    0x654321, // Dark brown
-    0x6b4423, // Brown
-    0x7b3f00, // Chocolate
-    0x8b4513, // Saddle brown
-    0x9c5a2a, // Light brown
-    0x5d4037  // Dark brown
-];
-
-const CANOPY_COLORS = [
-    0x228b22, // Forest green
-    0x32cd32, // Lime green
-    0x2e8b57, // Sea green
-    0x3cb371, // Medium sea green
-    0x228b22, // Forest green
-    0x2d5016, // Dark green
-    0x4a7c59, // Medium green
-    0x5a8a5a  // Light forest green
-];
+import { TREE_CONFIG } from '../config/tree.js';
+import { VISUAL_CONFIG } from '../config/visual.js';
 
 export class Tree extends BaseModel {
     constructor(x, z) {
         const position = new THREE.Vector3(x, 0, z);
         super(position, {
             modelPath: 'tree.glb',
-            placeholderColor: 0x228b22, // Green placeholder
-            scale: 0.5
+            placeholderColor: VISUAL_CONFIG.treePlaceholderColor,
+            scale: VISUAL_CONFIG.treeScale
         });
         
         this.isCut = false;
-        this.interactionRange = 2.5;
+        this.interactionRange = TREE_CONFIG.interactionRange;
         
         // Interaction state
         this.isInteracting = false;
-        this.interactionProgress = 0.0; // 0.0 to 1.0 (0 to 3 seconds)
+        this.interactionProgress = 0.0; // 0.0 to 1.0
         
         // Falling animation state
         this.isFalling = false;
@@ -64,8 +33,8 @@ export class Tree extends BaseModel {
         this.canopySecondaryMesh = null;
         
         // Tree colors (randomized per tree)
-        this.trunkColor = TRUNK_COLORS[Math.floor(Math.random() * TRUNK_COLORS.length)];
-        this.canopyColor = CANOPY_COLORS[Math.floor(Math.random() * CANOPY_COLORS.length)];
+        this.trunkColor = TREE_CONFIG.trunkColors[Math.floor(Math.random() * TREE_CONFIG.trunkColors.length)];
+        this.canopyColor = TREE_CONFIG.canopyColors[Math.floor(Math.random() * TREE_CONFIG.canopyColors.length)];
     }
     
     onModelLoadedInternal() {
@@ -161,7 +130,7 @@ export class Tree extends BaseModel {
     updateInteraction(deltaTime) {
         if (!this.isInteracting || this.isCut || this.isFalling) return;
         
-        this.interactionProgress += deltaTime / INTERACTION_DURATION;
+        this.interactionProgress += deltaTime / TREE_CONFIG.interactionDuration;
         
         if (this.interactionProgress >= 1.0) {
             this.interactionProgress = 1.0;
@@ -204,7 +173,7 @@ export class Tree extends BaseModel {
         
         // Handle falling animation
         if (this.isFalling) {
-            this.fallProgress += deltaTime / FALL_DURATION;
+            this.fallProgress += deltaTime / TREE_CONFIG.fallDuration;
             
             if (this.fallProgress >= 1.0) {
                 this.fallProgress = 1.0;
@@ -214,7 +183,7 @@ export class Tree extends BaseModel {
                 // Resources will be given in Game.update() when it detects this state
             } else {
                 // Calculate rotation angle (0 to FALL_ANGLE)
-                this.fallRotation = this.fallProgress * FALL_ANGLE;
+                this.fallRotation = this.fallProgress * TREE_CONFIG.fallAngle;
                 
                 // Calculate rotation axis (perpendicular to fall direction)
                 // Rotate around X and Z axes based on fall direction
@@ -250,12 +219,12 @@ export class Tree extends BaseModel {
         if (this.isCut) return;
         
         // Use game time for synchronized wind (all trees sway in same direction)
-        const windTime = gameTime * WIND_SPEED;
+        const windTime = gameTime * TREE_CONFIG.windSpeed;
         
         // Rotate entire tree around its base (trunk base) in the wind direction
         // The tree rotates as a whole, pivoting at the base
-        const swayX = Math.sin(windTime) * TREE_SWAY_AMPLITUDE * Math.sin(WIND_DIRECTION);
-        const swayZ = Math.sin(windTime) * TREE_SWAY_AMPLITUDE * Math.cos(WIND_DIRECTION);
+        const swayX = Math.sin(windTime) * TREE_CONFIG.swayAmplitude * Math.sin(TREE_CONFIG.windDirection);
+        const swayZ = Math.sin(windTime) * TREE_CONFIG.swayAmplitude * Math.cos(TREE_CONFIG.windDirection);
         
         // Apply rotation to the entire mesh (rotates around Y axis at base)
         // We rotate around X and Z axes to create the sway effect

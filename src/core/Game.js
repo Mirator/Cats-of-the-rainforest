@@ -17,6 +17,9 @@ import { ConstructionSite } from '../entities/ConstructionSite.js';
 import { GhostPreview } from '../entities/GhostPreview.js';
 import { PlacementCursor } from '../entities/PlacementCursor.js';
 import { UIManager } from '../ui/UIManager.js';
+import { MAP_CONFIG } from '../config/map.js';
+import { WAVE_CONFIG } from '../config/waves.js';
+import { CONTROLS } from '../config/controls.js';
 import * as THREE from 'three';
 
 export class Game {
@@ -161,7 +164,7 @@ export class Game {
         
         // Calculate miceAlert from trees cut today
         const treesCutToday = this.daySystem.getTreesCutToday();
-        const miceAlert = Math.min(treesCutToday * 0.5, 10); // Capped at 10
+        const miceAlert = Math.min(treesCutToday * 0.5, WAVE_CONFIG.miceAlert.maxExtraEnemies);
         
         // Start the wave
         this.waveSystem.startWave(waveNumber, miceAlert);
@@ -170,26 +173,26 @@ export class Game {
         // Update UI
         this.uiManager.updateWaveInfo(waveNumber, 0, waveConfig.enemyCount);
         
-        // Set lastSpawnTime so first enemy spawns after 2 seconds
+        // Set lastSpawnTime so first enemy spawns after initial delay
         // For wave 5 (spawnInterval = 0), we'll handle it specially in the update loop
         if (waveNumber === 5) {
-            // For wave 5, set to spawn after 2 seconds
-            this.lastSpawnTime = this.gameTime - 2.0;
+            // For wave 5, set to spawn after initial delay
+            this.lastSpawnTime = this.gameTime - WAVE_CONFIG.initialSpawnDelay;
         } else {
-            // For other waves, set lastSpawnTime so first spawn happens after 2 seconds
-            // timeSinceLastSpawn = gameTime - (gameTime - (spawnInterval - 2)) = spawnInterval - 2
-            // After 2 seconds: timeSinceLastSpawn = spawnInterval, triggering spawn
-            this.lastSpawnTime = this.gameTime - (waveConfig.spawnInterval - 2.0);
+            // For other waves, set lastSpawnTime so first spawn happens after initial delay
+            // timeSinceLastSpawn = gameTime - (gameTime - (spawnInterval - delay)) = spawnInterval - delay
+            // After delay: timeSinceLastSpawn = spawnInterval, triggering spawn
+            this.lastSpawnTime = this.gameTime - (waveConfig.spawnInterval - WAVE_CONFIG.initialSpawnDelay);
         }
     }
     
     generateTrees() {
         const mapSize = this.mapSystem.getMapSize();
         const boundary = this.mapSystem.getBoundary();
-        const treeCount = 80; // Increased from 20 to match 4x larger map
+        const treeCount = MAP_CONFIG.treeCount;
         
         // Avoid center area for totem (scaled proportionally)
-        const centerRadius = 6;
+        const centerRadius = MAP_CONFIG.centerRadius;
         
         for (let i = 0; i < treeCount; i++) {
             let x, z;
@@ -397,7 +400,7 @@ export class Game {
             // Handle player combat
             if (this.daySystem.isNight()) {
                 const attackInput = this.inputManager.mouse.clicked && this.inputManager.mouse.button === 0 ||
-                                   this.inputManager.isKeyPressed('f');
+                                   this.inputManager.isAnyKeyPressed(CONTROLS.attack);
                 if (attackInput) {
                     const enemies = this.enemySystem.getEnemies();
                     this.player.attack(deltaTime, enemies);
@@ -599,8 +602,8 @@ export class Game {
             return;
         }
         
-        // Handle B key toggle
-        if (this.inputManager.isKeyPressed('b')) {
+        // Handle build mode toggle
+        if (this.inputManager.isAnyKeyPressed(CONTROLS.toggleBuildMode)) {
             // Use a flag to prevent multiple toggles in one frame
             if (!this.buildModeTogglePressed) {
                 this.toggleBuildMode();
@@ -610,8 +613,8 @@ export class Game {
             this.buildModeTogglePressed = false;
         }
         
-        // Handle Esc key to exit build mode
-        if (this.inputManager.isKeyPressed('Escape')) {
+        // Handle exit build mode
+        if (this.inputManager.isAnyKeyPressed(CONTROLS.exitBuildMode)) {
             if (this.buildModeSystem.isActive()) {
                 // If in placement, cancel placement first
                 if (this.buildModeSystem.isInPlacement()) {
@@ -638,9 +641,13 @@ export class Game {
         const itemIds = Object.keys(buildItems);
         
         // Number key selection (1-9)
+        const numberKeys = [
+            CONTROLS.selectItem1, CONTROLS.selectItem2, CONTROLS.selectItem3,
+            CONTROLS.selectItem4, CONTROLS.selectItem5, CONTROLS.selectItem6,
+            CONTROLS.selectItem7, CONTROLS.selectItem8, CONTROLS.selectItem9
+        ];
         for (let i = 0; i < Math.min(itemIds.length, 9); i++) {
-            const key = String(i + 1);
-            if (this.inputManager.isKeyPressed(key)) {
+            if (this.inputManager.isAnyKeyPressed(numberKeys[i])) {
                 const itemId = itemIds[i];
                 if (this.buildModeSystem.canAffordBuildItem(itemId, this.daySystem, this.resourceSystem)) {
                     this.selectBuildItem(itemId);
@@ -656,13 +663,13 @@ export class Game {
             this.uiManager.selectBuildMenuItem(0);
         }
         
-        if (this.inputManager.isKeyPressed('ArrowUp')) {
+        if (this.inputManager.isAnyKeyPressed(CONTROLS.menuUp)) {
             const newIndex = Math.max(0, menuIndex - 1);
             this.uiManager.selectBuildMenuItem(newIndex);
-        } else if (this.inputManager.isKeyPressed('ArrowDown')) {
+        } else if (this.inputManager.isAnyKeyPressed(CONTROLS.menuDown)) {
             const newIndex = Math.min(itemIds.length - 1, menuIndex + 1);
             this.uiManager.selectBuildMenuItem(newIndex);
-        } else if (this.inputManager.isKeyPressed('Enter')) {
+        } else if (this.inputManager.isAnyKeyPressed(CONTROLS.menuConfirm)) {
             const currentIndex = this.uiManager.selectedBuildItemIndex;
             if (currentIndex >= 0 && currentIndex < itemIds.length) {
                 const itemId = itemIds[currentIndex];
@@ -682,8 +689,7 @@ export class Game {
         let usingKeyboard = false;
         
         // Check if keyboard movement keys are pressed (indicates keyboard-only mode)
-        const movementKeys = ['w', 's', 'a', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
-        usingKeyboard = movementKeys.some(key => this.inputManager.isKeyPressed(key));
+        usingKeyboard = this.inputManager.isMovementKeyPressed();
         
         if (usingKeyboard) {
             this.usingKeyboardPlacement = true;
@@ -740,13 +746,13 @@ export class Game {
         }
         
         // Handle placement confirmation
-        if (this.inputManager.isKeyPressed('Enter') || this.inputManager.isKeyPressed(' ') || 
+        if (this.inputManager.isAnyKeyPressed(CONTROLS.confirmBuild) || 
             (this.inputManager.mouse.clicked && this.inputManager.mouse.button === 0)) {
             this.confirmPlacement(placementX, placementZ);
         }
         
         // Handle placement cancellation (right click returns to menu, Esc exits completely)
-        if (this.inputManager.mouse.rightClicked) {
+        if (this.inputManager.isAnyKeyPressed(CONTROLS.cancelBuild)) {
             this.buildModeSystem.cancelPlacement();
             this.cancelPlacementVisuals();
             // Return to menu (Esc key exits completely, handled in handleBuildMode)
@@ -836,8 +842,8 @@ export class Game {
             return; // Can't cut trees at night
         }
         
-        // Check if space is being held
-        const spaceHeld = this.inputManager.isKeyHeld(' ');
+        // Check if interact key is being held
+        const spaceHeld = this.inputManager.isAnyKeyHeld(CONTROLS.interact);
         
         // Find nearest tree within range
         let nearestTree = null;
@@ -990,7 +996,7 @@ export class Game {
         // Calculate idle position near Forest Totem
         const totemPos = this.forestTotem.getPosition();
         const angle = Math.random() * Math.PI * 2;
-        const radius = 3 + Math.random() * 2; // 3-5 units from totem
+        const radius = MAP_CONFIG.catSpawnRadius.min + Math.random() * (MAP_CONFIG.catSpawnRadius.max - MAP_CONFIG.catSpawnRadius.min);
         const idleX = totemPos.x + Math.cos(angle) * radius;
         const idleZ = totemPos.z + Math.sin(angle) * radius;
         const idlePosition = new THREE.Vector3(idleX, 0, idleZ);

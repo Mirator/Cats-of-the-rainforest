@@ -1,12 +1,14 @@
 import { BaseModel } from './BaseModel.js';
+import { VISUAL_CONFIG } from '../config/visual.js';
+import { ANIMATION_CONFIG } from '../config/animation.js';
 
 export class MouseModel extends BaseModel {
     constructor(position, { onModelLoaded } = {}) {
         super(position, {
             onModelLoaded,
             modelPath: 'mouse.glb',
-            placeholderColor: 0x8b7355, // Brown-gray color for mouse placeholder
-            scale: 0.5
+            placeholderColor: VISUAL_CONFIG.mousePlaceholderColor,
+            scale: VISUAL_CONFIG.mouseScale
         });
         
         // Animation properties
@@ -52,8 +54,8 @@ export class MouseModel extends BaseModel {
         this.animationTime += deltaTime;
         
         if (isMoving && this.legMeshes.length >= 2) {
-            const legSpeed = 3.0; // Slightly faster than cat for scurrying
-            const legAmplitude = 20 * (Math.PI / 180);
+            const legSpeed = ANIMATION_CONFIG.mouse.legSpeed;
+            const legAmplitude = ANIMATION_CONFIG.mouse.legAmplitude;
             
             for (let i = 0; i < this.legMeshes.length; i++) {
                 const leg = this.legMeshes[i];
@@ -65,8 +67,8 @@ export class MouseModel extends BaseModel {
         } else {
             // Gradually stop animation
             this.legMeshes.forEach(leg => {
-                leg.rotation.x *= 0.9;
-                if (Math.abs(leg.rotation.x) < 0.01) {
+                leg.rotation.x *= ANIMATION_CONFIG.dampingFactor;
+                if (Math.abs(leg.rotation.x) < ANIMATION_CONFIG.minRotationThreshold) {
                     leg.rotation.x = 0;
                 }
             });

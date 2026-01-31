@@ -1,3 +1,5 @@
+import { RESOURCE_CONFIG } from '../config/resources.js';
+
 export const DayState = {
     DAY: 'day',
     NIGHT: 'night'
@@ -9,8 +11,8 @@ export class DaySystem {
         this.currentDay = 1;
         this.listeners = [];
         this.treesCutToday = 0;
-        this.maxStamina = 10;
-        this.stamina = 10;
+        this.maxStamina = RESOURCE_CONFIG.maxStamina;
+        this.stamina = RESOURCE_CONFIG.initialStamina;
     }
     
     getState() {

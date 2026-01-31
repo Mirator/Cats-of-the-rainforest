@@ -1,3 +1,5 @@
+import { CONTROLS } from '../config/controls.js';
+
 export class InputManager {
     constructor() {
         this.keys = {};
@@ -69,17 +71,17 @@ export class InputManager {
     getMovementVector() {
         const move = { x: 0, z: 0 };
         
-        // WASD or Arrow keys
-        if (this.isKeyPressed('w') || this.isKeyPressed('ArrowUp')) {
+        // Movement keys from config
+        if (this.isAnyKeyPressed(CONTROLS.moveUp)) {
             move.z -= 1;
         }
-        if (this.isKeyPressed('s') || this.isKeyPressed('ArrowDown')) {
+        if (this.isAnyKeyPressed(CONTROLS.moveDown)) {
             move.z += 1;
         }
-        if (this.isKeyPressed('a') || this.isKeyPressed('ArrowLeft')) {
+        if (this.isAnyKeyPressed(CONTROLS.moveLeft)) {
             move.x -= 1;
         }
-        if (this.isKeyPressed('d') || this.isKeyPressed('ArrowRight')) {
+        if (this.isAnyKeyPressed(CONTROLS.moveRight)) {
             move.x += 1;
         }
         
@@ -93,7 +95,38 @@ export class InputManager {
     }
     
     isActionPressed() {
-        return this.isKeyPressed(' ') || this.mouse.clicked;
+        return this.isAnyKeyPressed(CONTROLS.interact) || this.mouse.clicked;
+    }
+    
+    // Helper function to check if any of the keys in an array are pressed
+    isAnyKeyPressed(keys) {
+        return keys.some(key => {
+            if (key === 'RightClick') {
+                return this.mouse.rightClicked;
+            }
+            return this.isKeyPressed(key);
+        });
+    }
+    
+    // Helper function to check if any of the keys in an array are held
+    isAnyKeyHeld(keys) {
+        return keys.some(key => {
+            if (key === 'RightClick') {
+                return this.mouse.rightDown;
+            }
+            return this.isKeyHeld(key);
+        });
+    }
+    
+    // Helper function to check if any movement key is pressed
+    isMovementKeyPressed() {
+        const movementKeys = [
+            ...CONTROLS.moveUp,
+            ...CONTROLS.moveDown,
+            ...CONTROLS.moveLeft,
+            ...CONTROLS.moveRight
+        ];
+        return movementKeys.some(key => this.isKeyPressed(key));
     }
     
     update() {

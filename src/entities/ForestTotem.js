@@ -1,10 +1,11 @@
 import * as THREE from 'three';
+import { BUILDING_CONFIG } from '../config/buildings.js';
 
 export class ForestTotem {
     constructor(x, z) {
         this.position = new THREE.Vector3(x, 0, z);
-        this.health = 100;
-        this.maxHealth = 100;
+        this.health = BUILDING_CONFIG.forestTotem.health;
+        this.maxHealth = BUILDING_CONFIG.forestTotem.maxHealth;
         this.mesh = null;
         
         this.createMesh();
@@ -59,6 +60,6 @@ export class ForestTotem {
     }
     
     getInfluenceRadius() {
-        return 15.0; // 15 units influence radius
+        return BUILDING_CONFIG.forestTotem.influenceRadius;
     }
 }

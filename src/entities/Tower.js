@@ -1,15 +1,17 @@
 import * as THREE from 'three';
 import { BaseModel } from './BaseModel.js';
+import { BUILDING_CONFIG } from '../config/buildings.js';
+import { VISUAL_CONFIG } from '../config/visual.js';
 
 export class Tower extends BaseModel {
     constructor(x, z) {
         const position = new THREE.Vector3(x, 0, z);
         super(position, {
-            placeholderColor: 0x6a5a4a, // Gray-brown color for tower
-            scale: 0.5
+            placeholderColor: VISUAL_CONFIG.towerPlaceholderColor,
+            scale: VISUAL_CONFIG.catScale
         });
         
-        this.size = 1.5; // Collision radius
+        this.size = BUILDING_CONFIG.tower.size;
         this.isBuilt = false;
         
         // Cat assignment
@@ -17,9 +19,9 @@ export class Tower extends BaseModel {
         this.isActive = false;
         
         // Combat properties
-        this.attackRange = 8.0;
-        this.attackDamage = 2;
-        this.attackCooldown = 1.5; // seconds
+        this.attackRange = BUILDING_CONFIG.tower.attackRange;
+        this.attackDamage = BUILDING_CONFIG.tower.attackDamage;
+        this.attackCooldown = BUILDING_CONFIG.tower.attackCooldown;
         this.lastAttackTime = 0;
         this.targetEnemy = null;
     }
@@ -76,7 +78,7 @@ export class Tower extends BaseModel {
         if (!daySystem || !daySystem.isDay()) return false;
         
         const distance = playerPosition.distanceTo(this.position);
-        return distance <= 2.5; // Interaction range
+        return distance <= BUILDING_CONFIG.tower.interactionRange;
     }
     
     findTarget(enemies, totemPosition) {

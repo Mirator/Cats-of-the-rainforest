@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { BUILD_CONFIG } from '../config/build.js';
+import { COMBAT_CONFIG } from '../config/combat.js';
+import { CONTROLS } from '../config/controls.js';
 
 export const BuildModeState = {
     INACTIVE: 'inactive',
@@ -6,37 +9,16 @@ export const BuildModeState = {
     PLACEMENT: 'placement'
 };
 
-// Constants for collision detection
-const TREE_COLLISION_RADIUS = 1.0;
-const TOTEM_COLLISION_RADIUS = 0.5;
-
 export class BuildModeSystem {
     constructor() {
         this.state = BuildModeState.INACTIVE;
         this.selectedBuildItem = null;
         this.placementCursorPosition = new THREE.Vector3(0, 0, 0);
-        this.gridSize = 1.0;
-        this.totemInfluenceRadius = 15.0;
+        this.gridSize = BUILD_CONFIG.gridSize;
+        this.totemInfluenceRadius = BUILD_CONFIG.totemInfluenceRadius;
         
         // Buildable items configuration
-        this.buildItems = {
-            'cat-den': {
-                id: 'cat-den',
-                name: 'Cat Den',
-                woodCost: 3,
-                staminaCost: 1,
-                icon: '', // No icon
-                size: 1.5 // Collision radius
-            },
-            'tower': {
-                id: 'tower',
-                name: 'Tower',
-                woodCost: 5,
-                staminaCost: 1,
-                icon: '', // No icon
-                size: 1.5 // Collision radius
-            }
-        };
+        this.buildItems = BUILD_CONFIG.buildItems;
     }
     
     toggleBuildMode() {
@@ -103,17 +85,17 @@ export class BuildModeSystem {
         const move = { x: 0, z: 0 };
         const moveSpeed = this.gridSize;
         
-        // WASD or Arrow keys
-        if (inputManager.isKeyPressed('w') || inputManager.isKeyPressed('ArrowUp')) {
+        // Placement movement keys from config
+        if (inputManager.isAnyKeyPressed(CONTROLS.placementUp)) {
             move.z -= moveSpeed;
         }
-        if (inputManager.isKeyPressed('s') || inputManager.isKeyPressed('ArrowDown')) {
+        if (inputManager.isAnyKeyPressed(CONTROLS.placementDown)) {
             move.z += moveSpeed;
         }
-        if (inputManager.isKeyPressed('a') || inputManager.isKeyPressed('ArrowLeft')) {
+        if (inputManager.isAnyKeyPressed(CONTROLS.placementLeft)) {
             move.x -= moveSpeed;
         }
-        if (inputManager.isKeyPressed('d') || inputManager.isKeyPressed('ArrowRight')) {
+        if (inputManager.isAnyKeyPressed(CONTROLS.placementRight)) {
             move.x += moveSpeed;
         }
         
@@ -197,7 +179,7 @@ export class BuildModeSystem {
             const distance = Math.sqrt(dx * dx + dz * dz);
             
             // Tree collision radius
-            if (distance < buildRadius + TREE_COLLISION_RADIUS) {
+            if (distance < buildRadius + COMBAT_CONFIG.treeCollisionRadius) {
                 return { valid: false, reason: 'Overlaps with tree' };
             }
         }
@@ -222,7 +204,7 @@ export class BuildModeSystem {
             const dz = z - totemPos.z;
             const distance = Math.sqrt(dx * dx + dz * dz);
             
-            if (distance < buildRadius + TOTEM_COLLISION_RADIUS) {
+            if (distance < buildRadius + COMBAT_CONFIG.totemCollisionRadius) {
                 return { valid: false, reason: 'Overlaps with Forest Totem' };
             }
         }

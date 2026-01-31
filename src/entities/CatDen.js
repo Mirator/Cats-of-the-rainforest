@@ -1,21 +1,23 @@
 import * as THREE from 'three';
 import { BaseModel } from './BaseModel.js';
+import { BUILDING_CONFIG } from '../config/buildings.js';
+import { VISUAL_CONFIG } from '../config/visual.js';
 
 export class CatDen extends BaseModel {
     constructor(x, z) {
         const position = new THREE.Vector3(x, 0, z);
         super(position, {
-            placeholderColor: 0x8b7355, // Brown/tan color for cat den
-            scale: 0.5
+            placeholderColor: VISUAL_CONFIG.catDenPlaceholderColor,
+            scale: VISUAL_CONFIG.catScale
         });
         
-        this.size = 1.5; // Collision radius
+        this.size = BUILDING_CONFIG.catDen.size;
         this.isBuilt = false;
         
         // Interaction state (similar to Tree)
         this.isInteracting = false;
         this.interactionProgress = 0.0; // 0.0 to 1.0
-        this.interactionDuration = 3.0; // 3 seconds to spawn cat
+        this.interactionDuration = BUILDING_CONFIG.catDen.interactionDuration;
     }
     
     onModelLoadedInternal() {
@@ -44,11 +46,11 @@ export class CatDen extends BaseModel {
         if (!daySystem || !daySystem.isDay()) return false;
         
         const distance = playerPosition.distanceTo(this.position);
-        return distance <= 2.5; // Interaction range
+        return distance <= BUILDING_CONFIG.catDen.interactionRange;
     }
     
     getSpawnCost() {
-        return { food: 1, stamina: 1 };
+        return BUILDING_CONFIG.catDen.spawnCost;
     }
     
     startInteraction() {

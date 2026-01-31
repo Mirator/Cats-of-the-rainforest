@@ -1,18 +1,20 @@
 import * as THREE from 'three';
 import { MouseModel } from './MouseModel.js';
+import { ENEMY_CONFIG } from '../config/enemies.js';
+import { MOVEMENT_CONFIG } from '../config/movement.js';
 
 export class Mouse {
     constructor(x, z, hpMultiplier = 1.0) {
         this.position = new THREE.Vector3(x, 0, z);
         this.mesh = null;
-        this.speed = 4.5; // Slower than player
+        this.speed = ENEMY_CONFIG.mouse.speed;
         this.modelLoaded = false;
-        this.yOffset = 0.5;
+        this.yOffset = ENEMY_CONFIG.mouse.yOffset;
         this.isDestroyed = false;
-        this.damageAmount = 5; // Damage dealt to totem on collision
+        this.damageAmount = ENEMY_CONFIG.mouse.damageAmount;
         
         // HP system
-        this.baseHP = 1;
+        this.baseHP = ENEMY_CONFIG.mouse.baseHP;
         this.hpMultiplier = hpMultiplier;
         this.currentHP = this.baseHP * this.hpMultiplier;
         this.maxHP = this.currentHP;
@@ -20,21 +22,21 @@ export class Mouse {
         // Pathfinding state
         this.currentPath = null;
         this.currentWaypointIndex = 0;
-        this.waypointReachDistance = 0.5; // Distance to consider waypoint reached
+        this.waypointReachDistance = ENEMY_CONFIG.shared.waypointReachDistance;
         this.lastPathUpdateTime = 0;
-        this.pathUpdateInterval = 1.0; // Recalculate path max once per second
+        this.pathUpdateInterval = ENEMY_CONFIG.shared.pathUpdateInterval;
         
         // Player blocking state
         this.targetPlayer = false;
-        this.playerCollisionRadius = 0.8;
-        this.attackCooldown = 1.0; // seconds
+        this.playerCollisionRadius = ENEMY_CONFIG.shared.playerCollisionRadius;
+        this.attackCooldown = ENEMY_CONFIG.mouse.attackCooldown;
         this.lastAttackTime = 0;
-        this.playerDamage = 1;
+        this.playerDamage = ENEMY_CONFIG.mouse.playerDamage;
         this.stopMovement = false;
         
         // Totem attack state
         this.attackingTotem = false;
-        this.totemAttackCooldown = 1.0; // seconds
+        this.totemAttackCooldown = ENEMY_CONFIG.mouse.totemAttackCooldown;
         this.lastTotemAttackTime = 0;
 
         this.model = new MouseModel(this.position, {
@@ -64,7 +66,7 @@ export class Mouse {
         
         // Check if attacking totem (continuous attacks)
         const distanceToTotem = this.position.distanceTo(totemPosition);
-        if (distanceToTotem < 1.5) {
+        if (distanceToTotem < ENEMY_CONFIG.shared.totemAttackRange) {
             this.attackingTotem = true;
             this.stopMovement = true;
             
@@ -83,7 +85,7 @@ export class Mouse {
         if (this.targetPlayer && player) {
             const playerPos = player.getPosition();
             const distanceToPlayer = this.position.distanceTo(playerPos);
-            const attackRange = this.playerCollisionRadius + 0.8; // Player radius
+            const attackRange = this.playerCollisionRadius + 0.8; // Player radius (from COMBAT_CONFIG.playerRadius)
             
             if (distanceToPlayer < attackRange) {
                 // Attack player

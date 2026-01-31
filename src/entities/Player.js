@@ -1,25 +1,26 @@
 import * as THREE from 'three';
 import { PlayerModel } from './PlayerModel.js';
+import { PLAYER_CONFIG } from '../config/player.js';
 
 export class Player {
     constructor(x, z) {
         this.position = new THREE.Vector3(x, 0, z);
         this.mesh = null;
-        this.speed = 6.5;
-        this.interactionRange = 2.5;
+        this.speed = PLAYER_CONFIG.speed;
+        this.interactionRange = PLAYER_CONFIG.interactionRange;
         this.modelLoaded = false;
-        this.yOffset = 0.5;
+        this.yOffset = PLAYER_CONFIG.yOffset;
         
         // Combat properties
-        this.attackRange = 1.5;
-        this.attackDamage = 1;
-        this.attackCooldown = 0.8; // seconds
+        this.attackRange = PLAYER_CONFIG.attackRange;
+        this.attackDamage = PLAYER_CONFIG.attackDamage;
+        this.attackCooldown = PLAYER_CONFIG.attackCooldown;
         this.lastAttackTime = 0;
-        this.attackArc = 120 * (Math.PI / 180); // 120 degrees in radians
+        this.attackArc = PLAYER_CONFIG.attackArc;
         
         // Health properties
-        this.maxHealth = 10;
-        this.currentHealth = 10;
+        this.maxHealth = PLAYER_CONFIG.maxHealth;
+        this.currentHealth = PLAYER_CONFIG.initialHealth;
 
         this.model = new PlayerModel(this.position, {
             onModelLoaded: ({ mesh, yOffset }) => {

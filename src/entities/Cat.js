@@ -1,16 +1,19 @@
 import * as THREE from 'three';
 import { BaseModel } from './BaseModel.js';
+import { CAT_CONFIG } from '../config/cat.js';
+import { VISUAL_CONFIG } from '../config/visual.js';
+import { ANIMATION_CONFIG } from '../config/animation.js';
 
 export class Cat extends BaseModel {
     constructor(x, z, playerMaskColor = null) {
         const position = new THREE.Vector3(x, 0, z);
         super(position, {
             modelPath: 'cat5.glb',
-            placeholderColor: 0xff8c42,
-            scale: 0.5
+            placeholderColor: VISUAL_CONFIG.catPlaceholderColor,
+            scale: VISUAL_CONFIG.catScale
         });
         
-        this.speed = 4.0;
+        this.speed = CAT_CONFIG.speed;
         this.state = 'idle'; // 'available' | 'assigned' | 'idle'
         this.assignedTower = null;
         this.idlePosition = null;
@@ -34,27 +37,10 @@ export class Cat extends BaseModel {
         this.playerMaskColor = playerMaskColor; // Store player's mask color
         
         // Body color palette (same as PlayerModel)
-        this.bodyColorPalette = [
-            0xff8c42, 0xff6b35, 0xffa500, 0xffb347, 0xffcc99, 0xffd700,
-            0xcd853f, 0xd2691e, 0xdaa520, 0xdeb887, 0xf4a460, 0xe6b887,
-            0xd3d3d3, 0xc0c0c0, 0xa9a9a9, 0xbcbcbc, 0xdcdcdc, 0xe0e0e0,
-            0xfff8dc, 0xfffdd0, 0xf5deb3, 0xfaf0e6, 0xfffef0, 0xfff8e7,
-            0xff6b6b, 0xffa07a, 0xffb6c1, 0xffc0cb, 0xffdab9, 0xffe4b5,
-            0xffe4e1, 0xfff0f5, 0xf0e68c, 0xfffacd, 0xfff5ee, 0xfdf5e6,
-            0xf5deb3, 0xe6d3a3, 0xd2b48c, 0xc9a961, 0xd4af37, 0xe6c200,
-            0xffdab9, 0xffcccb, 0xffb6c1, 0xffa07a, 0xff8c69, 0xff7f50
-        ];
+        this.bodyColorPalette = CAT_CONFIG.bodyColorPalette;
         
         // Mask color palette
-        this.maskColorPalette = [
-            0x4682b4, 0x5f9ea0, 0x40e0d0, 0x00ced1, 0x87ceeb, 0x6495ed,
-            0xdc143c, 0xff1493, 0xff6347, 0xff69b4, 0xff7f50, 0xcd5c5c,
-            0x9370db, 0xba55d3, 0xda70d6, 0x8a2be2, 0x9b59b6, 0x7b68ee,
-            0x8b7355, 0xa0826d, 0xb8860b, 0xcd853f, 0xdaa520, 0xd2691e,
-            0x6b8e23, 0x9acd32, 0x7cfc00, 0x32cd32, 0x3cb371, 0x66cdaa,
-            0xff8c00, 0xff7f50, 0xff6347, 0xff4500, 0xff6b47, 0xff8c69,
-            0xffd700, 0xffa500, 0xffb347, 0xdaa520, 0xb8860b, 0xd4af37
-        ];
+        this.maskColorPalette = CAT_CONFIG.maskColorPalette;
     }
     
     onModelLoadedInternal() {
@@ -216,8 +202,8 @@ export class Cat extends BaseModel {
         this.animationTime += deltaTime;
         
         if (isMoving && this.legMeshes.length >= 2) {
-            const legSpeed = 2.8;
-            const legAmplitude = 25 * (Math.PI / 180);
+            const legSpeed = CAT_CONFIG.legSpeed;
+            const legAmplitude = CAT_CONFIG.legAmplitude;
             
             for (let i = 0; i < this.legMeshes.length; i++) {
                 const leg = this.legMeshes[i];
@@ -228,28 +214,28 @@ export class Cat extends BaseModel {
             }
         } else {
             this.legMeshes.forEach(leg => {
-                leg.rotation.x *= 0.9;
-                if (Math.abs(leg.rotation.x) < 0.01) {
+                leg.rotation.x *= ANIMATION_CONFIG.dampingFactor;
+                if (Math.abs(leg.rotation.x) < ANIMATION_CONFIG.minRotationThreshold) {
                     leg.rotation.x = 0;
                 }
             });
         }
         
         if (this.headMesh && this.headOriginalPosition) {
-            const headSpeed = 1.5;
-            const headAmplitude = 2.5 * (Math.PI / 180);
+            const headSpeed = CAT_CONFIG.headSpeed;
+            const headAmplitude = CAT_CONFIG.headAmplitude;
             
             this.headMesh.rotation.x = Math.sin(this.animationTime * headSpeed * 2 * Math.PI) * headAmplitude;
             
-            const bobAmplitude = 0.03;
+            const bobAmplitude = CAT_CONFIG.headBobAmplitude;
             const bobOffset = Math.sin(this.animationTime * headSpeed * 2 * Math.PI) * bobAmplitude;
             this.headMesh.position.y = this.headOriginalPosition.y + bobOffset;
         }
         
         if (this.tailMesh && this.tailOriginalRotation) {
-            const tailSpeed = 1.0;
-            const idleAmplitude = 3 * (Math.PI / 180);
-            const runningAmplitude = 6 * (Math.PI / 180);
+            const tailSpeed = CAT_CONFIG.tailSpeed;
+            const idleAmplitude = CAT_CONFIG.idleAmplitude;
+            const runningAmplitude = CAT_CONFIG.runningAmplitude;
             const tailAmplitude = isMoving ? runningAmplitude : idleAmplitude;
             
             const tailPhase = Math.sin(this.animationTime * tailSpeed * 2 * Math.PI) * tailAmplitude;

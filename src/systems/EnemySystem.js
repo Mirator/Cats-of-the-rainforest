@@ -1,6 +1,7 @@
 import { Mouse } from '../entities/Mouse.js';
 import { FastMouse } from '../entities/FastMouse.js';
 import { StrongMouse } from '../entities/StrongMouse.js';
+import { COMBAT_CONFIG } from '../config/combat.js';
 
 export class EnemySystem {
     constructor(mapSystem, sceneManager) {
@@ -23,8 +24,8 @@ export class EnemySystem {
     spawnMouse(side, trees = [], enemyType = 'regular', hpMultiplier = 1.0) {
         // Spawn a mouse from specified side: 'north', 'south', 'east', 'west'
         let x, z;
-        const spawnRadius = 2.5; // Minimum distance from trees
-        const maxAttempts = 10; // Try up to 10 positions
+        const spawnRadius = COMBAT_CONFIG.spawnRadius;
+        const maxAttempts = COMBAT_CONFIG.maxSpawnAttempts;
 
         // Try to find a clear spawn position
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -174,7 +175,7 @@ export class EnemySystem {
                 const playerPos = player.getPosition();
                 const mousePos = mouse.getPosition();
                 const distance = playerPos.distanceTo(mousePos);
-                const collisionRadius = mouse.playerCollisionRadius + 0.8; // Player radius ~0.8
+                const collisionRadius = mouse.playerCollisionRadius + COMBAT_CONFIG.playerRadius;
                 
                 if (distance < collisionRadius) {
                     // Enemy collides with player - stop and target player

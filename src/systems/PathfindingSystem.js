@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { MOVEMENT_CONFIG } from '../config/movement.js';
 
 export class PathfindingSystem {
     constructor(mapSystem, totemPosition, trees = []) {
@@ -7,17 +8,15 @@ export class PathfindingSystem {
         this.trees = trees;
         
         // Grid settings - smaller cells for better precision
-        // Mouse radius: ~0.3-0.5 units, Tree collision: ~0.8-1.0 units
-        this.cellSize = 0.75; // Balance between precision and performance
+        this.cellSize = MOVEMENT_CONFIG.cellSize;
         this.mapSize = mapSystem.getMapSize();
         this.boundary = mapSystem.getBoundary();
         
         // Collision detection constants
-        this.mouseRadius = 0.3; // Estimated mouse collision radius
-        this.treeTrunkRadius = 0.4 / 2; // Half of trunk width (0.4 units)
-        this.treeFoliageRadius = 1.2 / 2; // Half of largest foliage (1.2 units)
-        // Effective collision radius: max(trunk, foliage) + mouse radius
-        this.treeCollisionRadius = Math.max(this.treeTrunkRadius, this.treeFoliageRadius) + this.mouseRadius; // ~0.9 units
+        this.mouseRadius = MOVEMENT_CONFIG.mouseRadius;
+        this.treeTrunkRadius = MOVEMENT_CONFIG.treeTrunkRadius;
+        this.treeFoliageRadius = MOVEMENT_CONFIG.treeFoliageRadius;
+        this.treeCollisionRadius = MOVEMENT_CONFIG.treeCollisionRadius;
         
         // Grid dimensions
         this.gridWidth = Math.ceil(this.mapSize / this.cellSize);

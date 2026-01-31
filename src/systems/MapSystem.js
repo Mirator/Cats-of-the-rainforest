@@ -1,10 +1,12 @@
 import * as THREE from 'three';
+import { MAP_CONFIG } from '../config/map.js';
+import { VISUAL_CONFIG } from '../config/visual.js';
 
 export class MapSystem {
     constructor(scene) {
         this.scene = scene;
-        this.mapSize = 120;
-        this.boundary = this.mapSize / 2;
+        this.mapSize = MAP_CONFIG.mapSize;
+        this.boundary = MAP_CONFIG.boundary;
         this.ground = null;
         this.extendedGround = null;
         this.boundaries = [];
@@ -44,7 +46,7 @@ export class MapSystem {
     
     createBoundaries() {
         // Create simple boundary markers (corner posts)
-        const boundaryHeight = 2;
+        const boundaryHeight = MAP_CONFIG.boundaryHeight;
         const boundaryGeometry = new THREE.BoxGeometry(0.5, boundaryHeight, 0.5);
         const boundaryMaterial = new THREE.MeshStandardMaterial({ color: 0x8b4513, flatShading: true });
         
