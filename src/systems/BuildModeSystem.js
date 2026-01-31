@@ -134,7 +134,7 @@ export class BuildModeSystem {
         return distance <= this.totemInfluenceRadius;
     }
     
-    validatePlacement(x, z, daySystem, resourceSystem, trees, buildings, totem, mapSystem) {
+    validatePlacement(x, z, daySystem, resourceSystem, trees, buildings, totem, mapSystem, discountInfo = null) {
         // Check if build mode is active
         if (!this.isActive()) {
             return { valid: false, reason: 'Build mode not active' };
@@ -149,12 +149,15 @@ export class BuildModeSystem {
             return { valid: false, reason: 'No build item selected' };
         }
         
+        // Calculate costs with discount
+        const costs = this.getBuildCosts(this.selectedBuildItem.id, discountInfo);
+        
         // Check resources
-        if (!resourceSystem.canAffordWood(this.selectedBuildItem.woodCost)) {
+        if (!resourceSystem.canAffordWood(costs.wood)) {
             return { valid: false, reason: 'Insufficient wood' };
         }
         
-        if (!daySystem.hasStamina() || daySystem.getStamina() < this.selectedBuildItem.staminaCost) {
+        if (!daySystem.hasStamina() || daySystem.getStamina() < costs.stamina) {
             return { valid: false, reason: 'Insufficient stamina' };
         }
         
@@ -213,14 +216,34 @@ export class BuildModeSystem {
         return { valid: true, reason: '' };
     }
     
-    canAffordBuildItem(itemId, daySystem, resourceSystem) {
+    canAffordBuildItem(itemId, daySystem, resourceSystem, discountInfo = null) {
         const item = this.buildItems[itemId];
         if (!item) return false;
         
-        const hasWood = resourceSystem.canAffordWood(item.woodCost);
-        const hasStamina = daySystem.hasStamina() && daySystem.getStamina() >= item.staminaCost;
+        const costs = this.getBuildCosts(itemId, discountInfo);
+        
+        const hasWood = resourceSystem.canAffordWood(costs.wood);
+        const hasStamina = daySystem.hasStamina() && daySystem.getStamina() >= costs.stamina;
         
         return hasWood && hasStamina;
+    }
+    
+    getBuildCosts(itemId, discountInfo = null) {
+        const item = this.buildItems[itemId];
+        if (!item) {
+            return { wood: 0, stamina: 0 };
+        }
+        
+        let woodCost = item.woodCost;
+        let staminaCost = item.staminaCost;
+        
+        // Apply discount if available
+        if (discountInfo && discountInfo.hasDiscount) {
+            woodCost = Math.max(0, item.woodCost - discountInfo.discount.wood);
+            staminaCost = Math.max(0, item.staminaCost - discountInfo.discount.stamina);
+        }
+        
+        return { wood: woodCost, stamina: staminaCost };
     }
     
     getTotemInfluenceRadius() {

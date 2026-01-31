@@ -7,6 +7,7 @@ import { PathfindingSystem } from '../systems/PathfindingSystem.js';
 import { EnemySystem } from '../systems/EnemySystem.js';
 import { WaveSystem } from '../systems/WaveSystem.js';
 import { BuildModeSystem, BuildModeState } from '../systems/BuildModeSystem.js';
+import { TutorialSystem } from '../systems/TutorialSystem.js';
 import { Player } from '../entities/Player.js';
 import { Tree } from '../entities/Tree.js';
 import { ForestTotem } from '../entities/ForestTotem.js';
@@ -19,6 +20,7 @@ import { PlacementCursor } from '../entities/PlacementCursor.js';
 import { UIManager } from '../ui/UIManager.js';
 import { MAP_CONFIG } from '../config/map.js';
 import { WAVE_CONFIG } from '../config/waves.js';
+import { BUILD_CONFIG } from '../config/build.js';
 import { CONTROLS } from '../config/controls.js';
 import * as THREE from 'three';
 
@@ -35,6 +37,16 @@ export class Game {
         this.enemySystem = null;
         this.waveSystem = null;
         this.buildModeSystem = null;
+        this.tutorialSystem = null;
+        
+        // First building tracking for discounts
+        this.firstCatDenBuilt = false;
+        this.firstTowerBuilt = false;
+        
+        // Tutorial tracking
+        this.treesCutCount = 0;
+        this.catsSpawnedCount = 0;
+        this.catsAssignedToTowerCount = 0;
         
         this.player = null;
         this.trees = [];
@@ -110,6 +122,10 @@ export class Game {
         // Initialize wave system
         this.waveSystem = new WaveSystem();
         
+        // Initialize tutorial system
+        this.tutorialSystem = new TutorialSystem();
+        this.setupTutorialSystem();
+        
         // Setup enemy system callbacks for wave tracking
         this.enemySystem.setOnEnemySpawned(() => {
             this.waveSystem.onEnemySpawned();
@@ -147,6 +163,8 @@ export class Game {
                     this.exitBuildMode();
                 }
                 this.startWave();
+                
+                // Tutorial step 5 completion is checked in updateTutorialUI
             }
         });
         
@@ -160,6 +178,39 @@ export class Game {
         this.uiManager.setBuildButtonEnabled(true);
         this.uiManager.updateWaveInfo(0, 0, 0); // No wave during day
         this.uiManager.updateStamina(this.daySystem.getStamina(), this.daySystem.getMaxStamina());
+    }
+    
+    setupTutorialSystem() {
+        // Set up completion checks for each tutorial step
+        this.tutorialSystem.setStepCompletionCheck(0, () => {
+            // Step 1: Cut down trees
+            return this.treesCutCount > 0;
+        });
+        
+        this.tutorialSystem.setStepCompletionCheck(1, () => {
+            // Step 2: Build a cat den
+            return this.firstCatDenBuilt;
+        });
+        
+        this.tutorialSystem.setStepCompletionCheck(2, () => {
+            // Step 3: Spawn a cat
+            return this.catsSpawnedCount > 0;
+        });
+        
+        this.tutorialSystem.setStepCompletionCheck(3, () => {
+            // Step 4: Assign cat to tower
+            return this.catsAssignedToTowerCount > 0;
+        });
+        
+        this.tutorialSystem.setStepCompletionCheck(4, () => {
+            // Step 5: Go to night
+            return this.daySystem.isNight() && this.daySystem.getCurrentDay() === 1;
+        });
+        
+        this.tutorialSystem.setStepCompletionCheck(5, () => {
+            // Step 6: Survive the first night
+            return this.waveSystem.getCurrentWave() === 1 && this.waveSystem.isWaveComplete();
+        });
     }
     
     startWave() {
@@ -258,8 +309,12 @@ export class Game {
         const buildItems = this.buildModeSystem.getBuildItems();
         this.uiManager.showBuildMenu(
             buildItems,
-            (itemId) => this.buildModeSystem.canAffordBuildItem(itemId, this.daySystem, this.resourceSystem),
-            (itemId) => this.selectBuildItem(itemId)
+            (itemId) => {
+                const discountInfo = this.getDiscountInfo(itemId);
+                return this.buildModeSystem.canAffordBuildItem(itemId, this.daySystem, this.resourceSystem, discountInfo);
+            },
+            (itemId) => this.selectBuildItem(itemId),
+            (itemId) => this.getDiscountInfo(itemId)
         );
         
         // Set build mode active visuals
@@ -511,6 +566,8 @@ export class Game {
                 this.resourceSystem.addFood(1);
                 // Track tree cut for miceAlert calculation
                 this.daySystem.incrementTreesCut();
+                // Track for tutorial
+                this.treesCutCount++;
                 // Mark resources as given to prevent duplicate rewards
                 tree.resourcesGiven = true;
                 // Visual effect for tree cut
@@ -613,9 +670,17 @@ export class Game {
                 
                 if (buildItem.id === 'cat-den') {
                     building = new CatDen(sitePos.x, sitePos.z);
+                    // Track first cat den for tutorial and discount
+                    if (!this.firstCatDenBuilt) {
+                        this.firstCatDenBuilt = true;
+                    }
                 } else if (buildItem.id === 'tower') {
                     building = new Tower(sitePos.x, sitePos.z);
                     this.towers.push(building);
+                    // Track first tower for tutorial and discount
+                    if (!this.firstTowerBuilt) {
+                        this.firstTowerBuilt = true;
+                    }
                 }
                 
                 if (building) {
@@ -645,6 +710,11 @@ export class Game {
         // Exit build mode if stamina reaches zero
         if (this.buildModeSystem.isActive() && !this.daySystem.hasStamina()) {
             this.exitBuildMode();
+        }
+        
+        // Update tutorial UI
+        if (this.tutorialSystem && this.tutorialSystem.isActive && !this.tutorialSystem.isTutorialComplete()) {
+            this.updateTutorialUI();
         }
     }
     
@@ -786,11 +856,16 @@ export class Game {
         if (this.ghostPreview) {
             this.ghostPreview.setPosition(placementX, placementZ);
             
+            // Get discount info for validation
+            const buildItem = this.buildModeSystem.getSelectedBuildItem();
+            const discountInfo = buildItem ? this.getDiscountInfo(buildItem.id) : null;
+            
             // Validate placement
             const validation = this.buildModeSystem.validatePlacement(
                 placementX, placementZ,
                 this.daySystem, this.resourceSystem,
-                this.trees, this.buildings, this.forestTotem, this.mapSystem
+                this.trees, this.buildings, this.forestTotem, this.mapSystem,
+                discountInfo
             );
             
             this.ghostPreview.updateValidity(validation.valid);
@@ -812,24 +887,31 @@ export class Game {
     }
     
     confirmPlacement(x, z) {
+        const buildItem = this.buildModeSystem.getSelectedBuildItem();
+        if (!buildItem) return;
+        
+        // Get discount info
+        const discountInfo = this.getDiscountInfo(buildItem.id);
+        
         // Validate placement again (also validated in handlePlacementMode for visual feedback)
         // This ensures resources haven't changed and placement is still valid at confirmation time
         const validation = this.buildModeSystem.validatePlacement(
             x, z,
             this.daySystem, this.resourceSystem,
-            this.trees, this.buildings, this.forestTotem, this.mapSystem
+            this.trees, this.buildings, this.forestTotem, this.mapSystem,
+            discountInfo
         );
         
         if (!validation.valid) {
             return; // Can't place here
         }
         
-        const buildItem = this.buildModeSystem.getSelectedBuildItem();
-        if (!buildItem) return;
+        // Calculate costs with discount
+        const costs = this.buildModeSystem.getBuildCosts(buildItem.id, discountInfo);
         
         // Deduct resources
-        this.resourceSystem.spendWood(buildItem.woodCost);
-        this.daySystem.consumeStamina(buildItem.staminaCost);
+        this.resourceSystem.spendWood(costs.wood);
+        this.daySystem.consumeStamina(costs.stamina);
         this.uiManager.updateStamina(this.daySystem.getStamina(), this.daySystem.getMaxStamina());
         
         // Create construction site
@@ -1057,6 +1139,9 @@ export class Game {
         this.sceneManager.add(cat.getMesh());
         cat.init();
         
+        // Track for tutorial
+        this.catsSpawnedCount++;
+        
         // Visual effect for cat spawn
         this.sceneManager.createParticleEffect(denPos, 'catSpawn');
     }
@@ -1162,6 +1247,8 @@ export class Game {
         
         if (nearestCat) {
             tower.assignCat(nearestCat);
+            // Track for tutorial
+            this.catsAssignedToTowerCount++;
         }
     }
     
@@ -1283,6 +1370,57 @@ export class Game {
     startGame() {
         this.gameState = 'playing';
         this.uiManager.hideMainMenu();
+        
+        // Show tutorial prompt
+        this.uiManager.showTutorialPrompt(
+            () => {
+                // Yes - start tutorial
+                this.tutorialSystem.start();
+                this.uiManager.showTutorial();
+                this.updateTutorialUI();
+            },
+            () => {
+                // No - skip tutorial
+                this.tutorialSystem.stop();
+            }
+        );
+    }
+    
+    updateTutorialUI() {
+        if (this.tutorialSystem.isActive && !this.tutorialSystem.isTutorialComplete()) {
+            const currentStep = this.tutorialSystem.getCurrentStep();
+            const progress = this.tutorialSystem.getProgress();
+            
+            if (currentStep) {
+                this.uiManager.updateTutorialStep(currentStep, progress);
+                
+                // Check if current step is complete
+                if (this.tutorialSystem.checkStepCompletion()) {
+                    this.tutorialSystem.advanceStep();
+                    
+                    if (this.tutorialSystem.isTutorialComplete()) {
+                        this.uiManager.hideTutorial();
+                    } else {
+                        this.updateTutorialUI();
+                    }
+                }
+            }
+        }
+    }
+    
+    getDiscountInfo(itemId) {
+        if (itemId === 'cat-den' && !this.firstCatDenBuilt) {
+            return {
+                hasDiscount: true,
+                discount: BUILD_CONFIG.firstWaveDiscounts['cat-den']
+            };
+        } else if (itemId === 'tower' && !this.firstTowerBuilt) {
+            return {
+                hasDiscount: true,
+                discount: BUILD_CONFIG.firstWaveDiscounts['tower']
+            };
+        }
+        return { hasDiscount: false, discount: { wood: 0, stamina: 0 } };
     }
     
     pauseGame() {
