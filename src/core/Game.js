@@ -174,10 +174,9 @@ export class Game {
         this.uiManager.updateWaveInfo(waveNumber, 0, waveConfig.enemyCount);
         
         // Set lastSpawnTime so first enemy spawns after initial delay
-        // For wave 5 (spawnInterval = 0), we'll handle it specially in the update loop
+        // For wave 5 (spawnInterval = 0), spawn immediately on first update tick
         if (waveNumber === 5) {
-            // For wave 5, set to spawn after initial delay
-            this.lastSpawnTime = this.gameTime - WAVE_CONFIG.initialSpawnDelay;
+            this.lastSpawnTime = this.gameTime;
         } else {
             // For other waves, set lastSpawnTime so first spawn happens after initial delay
             // timeSinceLastSpawn = gameTime - (gameTime - (spawnInterval - delay)) = spawnInterval - delay
@@ -530,9 +529,9 @@ export class Game {
                     // Check if it's time to spawn next enemy
                     const timeSinceLastSpawn = this.gameTime - this.lastSpawnTime;
                     
-                    // For wave 5 (boss), spawn after 2 seconds, then done
+                    // For wave 5 (boss), spawn immediately on the first tick, then done
                     if (this.waveSystem.getCurrentWave() === 5) {
-                        if (timeSinceLastSpawn >= 2.0) {
+                        if (this.waveSystem.enemiesSpawned === 0) {
                             this.enemySystem.spawnWaveEnemy(waveConfig, this.trees);
                             this.lastSpawnTime = this.gameTime; // Prevent multiple spawns
                         }
