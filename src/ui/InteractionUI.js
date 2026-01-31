@@ -6,6 +6,7 @@ export class InteractionUI {
         this.treeProgressBars = new Map();
         this.catDenProgressBars = new Map();
         this.towerProgressBars = new Map();
+        this.enemyHealthBars = new Map();
         this.totemProgressBar = null;
         this.edgeIndicators = {
             north: null,
@@ -208,6 +209,109 @@ export class InteractionUI {
         for (const [tree, bar] of this.treeProgressBars.entries()) {
             if (!interactingTrees.has(tree)) {
                 this.hideTreeProgressBar(tree);
+            }
+        }
+    }
+
+    showEnemyHealthBar(enemy, currentHP, maxHP, camera) {
+        if (!enemy || !camera || !enemy.getPosition) return;
+
+        const worldPosition = enemy.getPosition().clone();
+        const yOffset = enemy.yOffset !== undefined ? enemy.yOffset : 0.5;
+        worldPosition.y += yOffset + 1.2;
+
+        const screenPosition = worldPosition.clone();
+        screenPosition.project(camera);
+
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const x = (screenPosition.x * 0.5 + 0.5) * width;
+        const y = (-screenPosition.y * 0.5 + 0.5) * height;
+
+        if (screenPosition.z > 1 || x < 0 || x > width || y < 0 || y > height) {
+            this.hideEnemyHealthBar(enemy);
+            return;
+        }
+
+        let healthBar = this.enemyHealthBars.get(enemy);
+
+        if (!healthBar) {
+            healthBar = document.createElement('div');
+            healthBar.className = 'enemy-health-bar';
+            healthBar.style.cssText = `
+                position: fixed;
+                width: 70px;
+                height: 8px;
+                background: rgba(0, 0, 0, 0.7);
+                border: 1px solid rgba(255, 255, 255, 0.7);
+                border-radius: 4px;
+                pointer-events: none;
+                z-index: 1500;
+                transform: translate(-50%, -50%);
+            `;
+
+            const healthFill = document.createElement('div');
+            healthFill.className = 'enemy-health-fill';
+            healthFill.style.cssText = `
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, #ff6b6b, #c0392b);
+                border-radius: 3px;
+                transition: width 0.08s linear;
+            `;
+            healthBar.appendChild(healthFill);
+
+            document.body.appendChild(healthBar);
+            this.enemyHealthBars.set(enemy, healthBar);
+        }
+
+        healthBar.style.left = `${x}px`;
+        healthBar.style.top = `${y}px`;
+
+        const healthFill = healthBar.querySelector('.enemy-health-fill');
+        if (healthFill) {
+            const percentage = Math.min(100, Math.max(0, (currentHP / maxHP) * 100));
+            healthFill.style.width = `${percentage}%`;
+        }
+    }
+
+    hideEnemyHealthBar(enemy) {
+        const healthBar = this.enemyHealthBars.get(enemy);
+        if (healthBar) {
+            healthBar.remove();
+            this.enemyHealthBars.delete(enemy);
+        }
+    }
+
+    updateEnemyHealthBars(enemies, camera) {
+        const activeEnemies = new Set();
+
+        if (enemies && camera) {
+            for (const enemy of enemies) {
+                if (!enemy || enemy.isDestroyed) {
+                    this.hideEnemyHealthBar(enemy);
+                    continue;
+                }
+
+                const maxHP = enemy.getMaxHP ? enemy.getMaxHP() : 0;
+                const currentHP = enemy.getHP ? enemy.getHP() : maxHP;
+                if (maxHP <= 0) {
+                    this.hideEnemyHealthBar(enemy);
+                    continue;
+                }
+
+                if (currentHP < maxHP) {
+                    activeEnemies.add(enemy);
+                    this.showEnemyHealthBar(enemy, currentHP, maxHP, camera);
+                } else {
+                    this.hideEnemyHealthBar(enemy);
+                }
+            }
+        }
+
+        for (const [enemy, bar] of this.enemyHealthBars.entries()) {
+            if (!activeEnemies.has(enemy)) {
+                this.hideEnemyHealthBar(enemy);
             }
         }
     }

@@ -504,9 +504,10 @@ export class Game {
         // Handle build mode
         this.handleBuildMode(deltaTime);
         
+        const enemies = this.enemySystem ? this.enemySystem.getEnemies() : [];
+
         // Update player (disable movement when in build mode placement)
         if (!this.buildModeSystem.isInPlacement()) {
-            const enemies = this.enemySystem ? this.enemySystem.getEnemies() : [];
             this.player.update(deltaTime, this.inputManager, this.mapSystem, {
                 trees: this.trees,
                 buildings: this.buildings,
@@ -517,10 +518,20 @@ export class Game {
             
             // Handle player combat
             if (this.daySystem.isNight()) {
-                const attackInput = this.inputManager.mouse.clicked && this.inputManager.mouse.button === 0 ||
+                const mouseAttack = (this.inputManager.mouse.clicked || this.inputManager.mouse.down) &&
+                    this.inputManager.mouse.button === 0;
+                const attackInput = mouseAttack ||
                                    this.inputManager.isAnyKeyPressed(CONTROLS.attack);
                 if (attackInput) {
-                    this.player.attack(deltaTime, enemies);
+                    const result = this.player.attack(deltaTime, enemies);
+                    if (result.attacked) {
+                        this.sceneManager.createSlashEffect(
+                            this.player.getPosition(),
+                            this.player.getFacingRotationY(),
+                            this.player.attackRange,
+                            this.player.attackArc
+                        );
+                    }
                 }
             }
         }
@@ -534,6 +545,7 @@ export class Game {
         // Update tree progress bars
         const camera = this.sceneManager.camera;
         this.uiManager.updateTreeProgressBars(this.trees, camera);
+        this.uiManager.updateEnemyHealthBars(enemies, camera);
         
         // Update tree tooltips
         this.updateTreeTooltips(camera);
@@ -581,7 +593,6 @@ export class Game {
         }
         
         // Update towers
-        const enemies = this.enemySystem.getEnemies();
         const totemPos = this.forestTotem.getPosition();
         for (const tower of this.towers) {
             tower.update(deltaTime, enemies, totemPos);

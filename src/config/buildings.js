@@ -5,6 +5,9 @@ export const BUILDING_CONFIG = {
         attackRange: 8.0,
         attackDamage: 2,
         attackCooldown: 1.5, // seconds
+        projectileSpeed: 10.0, // units per second
+        projectileRadius: 0.12,
+        projectileHitRadius: 0.35,
         interactionRange: 2.5,
         interactionDuration: 1.5 // seconds to assign/unassign a cat
     },

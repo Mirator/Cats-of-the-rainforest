@@ -199,11 +199,10 @@ export class Player {
             
             // Check if enemy is within attack arc (in front of player)
             if (this.mesh) {
-                const playerForward = new THREE.Vector3(
-                    Math.sin(this.mesh.rotation.y),
-                    0,
-                    Math.cos(this.mesh.rotation.y)
-                );
+                const playerForward = new THREE.Vector3();
+                this.mesh.getWorldDirection(playerForward);
+                playerForward.y = 0;
+                playerForward.normalize();
                 
                 const toEnemy = new THREE.Vector3(
                     enemyPos.x - playerPos.x,
@@ -218,31 +217,63 @@ export class Player {
                 if (angle <= this.attackArc / 2) {
                     hitEnemies.push(enemy);
                 }
+            } else {
+                hitEnemies.push(enemy);
             }
         }
         
         return hitEnemies;
     }
+
+    getClosestEnemyInRange(enemies) {
+        if (!enemies || enemies.length === 0) return null;
+
+        let closest = null;
+        let closestDistance = Infinity;
+        const playerPos = this.position;
+
+        for (const enemy of enemies) {
+            if (enemy.isDestroyed) continue;
+            const enemyPos = enemy.getPosition();
+            const distance = playerPos.distanceTo(enemyPos);
+            if (distance > this.attackRange) continue;
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closest = enemy;
+            }
+        }
+
+        return closest;
+    }
+
+    facePosition(targetPosition) {
+        if (!this.mesh || !targetPosition) return;
+        const dx = targetPosition.x - this.position.x;
+        const dz = targetPosition.z - this.position.z;
+        const angle = Math.atan2(dx, dz) + Math.PI;
+        this.mesh.rotation.y = angle;
+    }
     
     attack(deltaTime, enemies) {
         if (!this.canAttack()) {
-            return false;
+            return { attacked: false, hitCount: 0 };
+        }
+
+        const closestEnemy = this.getClosestEnemyInRange(enemies);
+        if (closestEnemy) {
+            this.facePosition(closestEnemy.getPosition());
         }
         
         const hitEnemies = this.getEnemiesInRange(enemies);
         
-        if (hitEnemies.length > 0) {
-            // Deal damage to all hit enemies
-            for (const enemy of hitEnemies) {
-                enemy.takeDamage(this.attackDamage);
-            }
-            
-            // Reset cooldown
-            this.lastAttackTime = Date.now() / 1000;
-            return true;
+        // Deal damage to all hit enemies
+        for (const enemy of hitEnemies) {
+            enemy.takeDamage(this.attackDamage);
         }
         
-        return false;
+        // Reset cooldown
+        this.lastAttackTime = Date.now() / 1000;
+        return { attacked: true, hitCount: hitEnemies.length };
     }
     
     takeDamage(amount) {
@@ -264,5 +295,9 @@ export class Player {
     
     getMaskColor() {
         return this.model ? this.model.getMaskColor() : null;
+    }
+
+    getFacingRotationY() {
+        return this.mesh ? this.mesh.rotation.y : 0;
     }
 }

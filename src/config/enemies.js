@@ -3,7 +3,7 @@ export const ENEMY_CONFIG = {
     // Base Mouse stats
     mouse: {
         speed: 4.5,
-        baseHP: 1,
+        baseHP: 5,
         damageAmount: 5, // Damage dealt to totem
         playerDamage: 1,
         attackCooldown: 1.0, // seconds

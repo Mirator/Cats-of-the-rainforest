@@ -443,6 +443,70 @@ export class SceneManager {
             startTime: performance.now()
         });
     }
+
+    /**
+     * Create a slash effect in front of the player to visualize attack arc/range.
+     * @param {THREE.Vector3} position - World position
+     * @param {number} rotationY - Player facing rotation
+     * @param {number} range - Attack range
+     * @param {number} arc - Attack arc (radians)
+     */
+    createSlashEffect(position, rotationY, range, arc) {
+        const group = new THREE.Group();
+        group.position.copy(position);
+
+        const ringGeometry = new THREE.RingGeometry(range * 0.82, range, 32, 1, -arc / 2, arc);
+        const ringMaterial = new THREE.MeshBasicMaterial({
+            color: 0xf2f2f2,
+            transparent: true,
+            opacity: 0.5,
+            side: THREE.DoubleSide
+        });
+        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+        ring.rotation.x = -Math.PI / 2;
+        ring.rotation.y = rotationY + Math.PI / 2;
+        ring.position.y = 0.03;
+        group.add(ring);
+
+        const slashGroup = new THREE.Group();
+        const slashMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.9,
+            side: THREE.DoubleSide
+        });
+        const slashGeometry = new THREE.PlaneGeometry(0.08, Math.min(1.2, range * 0.8));
+
+        const slashOffsets = [-0.25, 0, 0.25];
+        for (const offset of slashOffsets) {
+            const slash = new THREE.Mesh(slashGeometry, slashMaterial.clone());
+            slash.position.set(0, 0.9, Math.min(1.2, range * 0.6));
+            slash.rotation.z = Math.PI / 4;
+            slash.rotation.y = offset;
+            slashGroup.add(slash);
+        }
+
+        slashGroup.rotation.y = rotationY;
+        group.add(slashGroup);
+
+        this.scene.add(group);
+
+        this.activeEffects.push({
+            group,
+            duration: 0.25,
+            startTime: performance.now(),
+            update: (effect, deltaTime, progress) => {
+                const scale = 0.9 + progress * 0.25;
+                effect.group.scale.set(scale, scale, scale);
+                effect.group.traverse((child) => {
+                    if (child.material) {
+                        child.material.opacity = Math.max(0, 1 - progress);
+                        child.material.transparent = true;
+                    }
+                });
+            }
+        });
+    }
     
     /**
      * Update all active visual effects
@@ -464,6 +528,11 @@ export class SceneManager {
                     if (child.material) child.material.dispose();
                 });
                 this.activeEffects.splice(i, 1);
+                continue;
+            }
+
+            if (typeof effect.update === 'function') {
+                effect.update(effect, deltaTime, progress);
                 continue;
             }
             

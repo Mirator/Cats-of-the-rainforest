@@ -27,8 +27,12 @@ export class Tower extends BaseModel {
         this.attackRange = BUILDING_CONFIG.tower.attackRange;
         this.attackDamage = BUILDING_CONFIG.tower.attackDamage;
         this.attackCooldown = BUILDING_CONFIG.tower.attackCooldown;
+        this.projectileSpeed = BUILDING_CONFIG.tower.projectileSpeed || 10.0;
+        this.projectileRadius = BUILDING_CONFIG.tower.projectileRadius || 0.12;
+        this.projectileHitRadius = BUILDING_CONFIG.tower.projectileHitRadius || 0.35;
         this.lastAttackTime = 0;
         this.targetEnemy = null;
+        this.projectiles = [];
     }
     
     onModelLoadedInternal() {
@@ -138,14 +142,79 @@ export class Tower extends BaseModel {
         return closestEnemy;
     }
     
-    attack(target) {
-        if (!target || target.isDestroyed) return false;
-        
-        const killed = target.takeDamage(this.attackDamage);
-        return killed;
+    createProjectile(target) {
+        if (!target || target.isDestroyed) return;
+
+        const geometry = new THREE.SphereGeometry(this.projectileRadius, 8, 8);
+        const material = new THREE.MeshStandardMaterial({ color: 0xd9a441 });
+        const projectile = new THREE.Mesh(geometry, material);
+
+        const origin = this.getProjectileOrigin();
+        projectile.position.copy(origin);
+
+        const parentScene = this.mesh ? this.mesh.parent : null;
+        if (parentScene) {
+            parentScene.add(projectile);
+        }
+
+        this.projectiles.push({
+            mesh: projectile,
+            target,
+            speed: this.projectileSpeed,
+            damage: this.attackDamage
+        });
+    }
+
+    getProjectileOrigin() {
+        const origin = this.position.clone();
+        origin.y += 2.3;
+        return origin;
+    }
+
+    updateProjectiles(deltaTime) {
+        for (let i = this.projectiles.length - 1; i >= 0; i--) {
+            const projectile = this.projectiles[i];
+            const { mesh, target, speed, damage } = projectile;
+
+            if (!mesh || !target || target.isDestroyed) {
+                this.removeProjectile(i);
+                continue;
+            }
+
+            const targetPos = target.getPosition().clone();
+            targetPos.y += 0.6;
+
+            const toTarget = new THREE.Vector3().subVectors(targetPos, mesh.position);
+            const distance = toTarget.length();
+
+            if (distance <= this.projectileHitRadius) {
+                target.takeDamage(damage);
+                this.removeProjectile(i);
+                continue;
+            }
+
+            if (distance > 0.0001) {
+                toTarget.normalize();
+                mesh.position.add(toTarget.multiplyScalar(speed * deltaTime));
+            }
+        }
+    }
+
+    removeProjectile(index) {
+        const projectile = this.projectiles[index];
+        if (projectile && projectile.mesh) {
+            if (projectile.mesh.parent) {
+                projectile.mesh.parent.remove(projectile.mesh);
+            }
+            if (projectile.mesh.geometry) projectile.mesh.geometry.dispose();
+            if (projectile.mesh.material) projectile.mesh.material.dispose();
+        }
+        this.projectiles.splice(index, 1);
     }
     
     update(deltaTime, enemies, totemPosition) {
+        this.updateProjectiles(deltaTime);
+
         if (!this.isActive()) {
             this.targetEnemy = null;
             return;
@@ -160,14 +229,9 @@ export class Tower extends BaseModel {
             const timeSinceLastAttack = currentTime - this.lastAttackTime;
             
             if (timeSinceLastAttack >= this.attackCooldown) {
-                // Attack target
-                const killed = this.attack(target);
+                // Fire projectile at target
+                this.createProjectile(target);
                 this.lastAttackTime = currentTime;
-                
-                // If enemy was killed, clear target
-                if (killed) {
-                    this.targetEnemy = null;
-                }
             }
         } else {
             this.targetEnemy = null;

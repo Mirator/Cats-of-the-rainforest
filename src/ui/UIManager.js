@@ -370,6 +370,12 @@ export class UIManager {
             this.interactionUI.updateTreeProgressBars(trees, camera);
         }
     }
+
+    updateEnemyHealthBars(enemies, camera) {
+        if (this.interactionUI) {
+            this.interactionUI.updateEnemyHealthBars(enemies, camera);
+        }
+    }
     
     hideTreeProgressBar(tree) {
         if (this.interactionUI) {
