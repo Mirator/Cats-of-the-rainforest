@@ -21,7 +21,7 @@ export class MapSystem {
         const extendedSize = this.mapSize * 2;
         const extendedGeometry = new THREE.PlaneGeometry(extendedSize, extendedSize);
         const extendedMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0x3a5c49, // Darker forest green
+            color: VISUAL_CONFIG.dayExtendedGroundColor,
             roughness: 0.8,
             flatShading: true
         });
@@ -34,7 +34,7 @@ export class MapSystem {
         // Create playable ground plane (120x120) - current green color
         const geometry = new THREE.PlaneGeometry(this.mapSize, this.mapSize);
         const material = new THREE.MeshStandardMaterial({ 
-            color: 0x4a7c59,
+            color: VISUAL_CONFIG.dayGroundColor,
             roughness: 0.8,
             flatShading: true
         });
@@ -85,5 +85,20 @@ export class MapSystem {
     
     getCenter() {
         return { x: 0, y: 0, z: 0 };
+    }
+
+    updateGroundColors(nightMix) {
+        if (!this.ground || !this.extendedGround) return;
+
+        const dayGround = new THREE.Color(VISUAL_CONFIG.dayGroundColor);
+        const nightGround = new THREE.Color(VISUAL_CONFIG.nightGroundColor);
+        const dayExtended = new THREE.Color(VISUAL_CONFIG.dayExtendedGroundColor);
+        const nightExtended = new THREE.Color(VISUAL_CONFIG.nightExtendedGroundColor);
+
+        const groundColor = dayGround.lerp(nightGround, nightMix);
+        const extendedColor = dayExtended.lerp(nightExtended, nightMix);
+
+        this.ground.material.color.copy(groundColor);
+        this.extendedGround.material.color.copy(extendedColor);
     }
 }

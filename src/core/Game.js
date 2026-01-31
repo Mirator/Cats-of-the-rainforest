@@ -493,7 +493,7 @@ export class Game {
         this.gameTime += deltaTime;
         
         // Update day/night visual transitions
-        this.sceneManager.updateDayNightTransition(deltaTime);
+        this.sceneManager.updateDayNightTransition(deltaTime, this.mapSystem);
         
         // Update visual effects
         this.sceneManager.update(deltaTime);
@@ -506,14 +506,20 @@ export class Game {
         
         // Update player (disable movement when in build mode placement)
         if (!this.buildModeSystem.isInPlacement()) {
-            this.player.update(deltaTime, this.inputManager, this.mapSystem);
+            const enemies = this.enemySystem ? this.enemySystem.getEnemies() : [];
+            this.player.update(deltaTime, this.inputManager, this.mapSystem, {
+                trees: this.trees,
+                buildings: this.buildings,
+                totem: this.forestTotem,
+                enemies,
+                constructionSites: this.constructionSites
+            });
             
             // Handle player combat
             if (this.daySystem.isNight()) {
                 const attackInput = this.inputManager.mouse.clicked && this.inputManager.mouse.button === 0 ||
                                    this.inputManager.isAnyKeyPressed(CONTROLS.attack);
                 if (attackInput) {
-                    const enemies = this.enemySystem.getEnemies();
                     this.player.attack(deltaTime, enemies);
                 }
             }

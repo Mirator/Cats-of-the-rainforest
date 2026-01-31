@@ -26,19 +26,23 @@ export const VISUAL_CONFIG = {
     
     // Scene colors
     dayBackground: 0x5a7c69,
-    nightBackground: 0x2a3a2a,
+    nightBackground: 0x344437,
     dayFogColor: 0x5a7c69,
-    nightFogColor: 0x2a3a2a,
+    nightFogColor: 0x344437,
     dayFogNear: 50,
     dayFogFar: 200,
     nightFogNear: 30,
     nightFogFar: 150,
+    dayGroundColor: 0x4a7c59,
+    nightGroundColor: 0x2f4338,
+    dayExtendedGroundColor: 0x3a5c49,
+    nightExtendedGroundColor: 0x28392f,
     
     // Lighting
     dayAmbientIntensity: 0.6,
     dayDirectionalIntensity: 0.8,
-    nightAmbientIntensity: 0.2,
-    nightDirectionalIntensity: 0.3,
+    nightAmbientIntensity: 0.32,
+    nightDirectionalIntensity: 0.45,
     
     // Day/Night transitions
     transitionDuration: 2.0, // seconds for smooth day/night transitions

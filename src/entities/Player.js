@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { PlayerModel } from './PlayerModel.js';
 import { PLAYER_CONFIG } from '../config/player.js';
+import { COMBAT_CONFIG } from '../config/combat.js';
 
 export class Player {
     constructor(x, z) {
@@ -21,6 +22,7 @@ export class Player {
         // Health properties
         this.maxHealth = PLAYER_CONFIG.maxHealth;
         this.currentHealth = PLAYER_CONFIG.initialHealth;
+        this.collisionRadius = COMBAT_CONFIG.playerRadius;
 
         this.model = new PlayerModel(this.position, {
             onModelLoaded: ({ mesh, yOffset }) => {
@@ -46,7 +48,7 @@ export class Player {
         this.model.updateAnimation(deltaTime, isMoving);
     }
 
-    update(deltaTime, inputManager, mapSystem) {
+    update(deltaTime, inputManager, mapSystem, collisionTargets = {}) {
         const move = inputManager.getMovementVector();
         const isMoving = move.x !== 0 || move.z !== 0;
 
@@ -58,8 +60,15 @@ export class Player {
             const newZ = this.position.z + move.z * moveSpeed;
 
             const clamped = mapSystem.clampPosition(newX, newZ);
-            this.position.x = clamped.x;
-            this.position.z = clamped.z;
+            const obstacles = this.getCollisionObstacles(collisionTargets);
+            const resolved = this.resolveCollisions(
+                new THREE.Vector3(clamped.x, 0, clamped.z),
+                obstacles,
+                mapSystem
+            );
+
+            this.position.x = resolved.x;
+            this.position.z = resolved.z;
 
             this.mesh.position.x = this.position.x;
             this.mesh.position.y = this.position.y + this.yOffset;
@@ -68,6 +77,99 @@ export class Player {
             const angle = Math.atan2(move.x, move.z) + Math.PI;
             this.mesh.rotation.y = angle;
         }
+    }
+
+    getCollisionObstacles({ trees = [], buildings = [], totem = null, enemies = [], constructionSites = [] } = {}) {
+        const obstacles = [];
+
+        for (const tree of trees) {
+            if (!tree || tree.isCut) continue;
+            const pos = tree.getPosition ? tree.getPosition() : tree.position;
+            if (!pos) continue;
+            obstacles.push({
+                x: pos.x,
+                z: pos.z,
+                radius: COMBAT_CONFIG.treeCollisionRadius
+            });
+        }
+
+        if (totem) {
+            const pos = totem.getPosition ? totem.getPosition() : totem.position;
+            if (pos) {
+                obstacles.push({
+                    x: pos.x,
+                    z: pos.z,
+                    radius: COMBAT_CONFIG.totemCollisionRadius
+                });
+            }
+        }
+
+        for (const building of buildings) {
+            if (!building) continue;
+            if (typeof building.getIsBuilt === 'function' && !building.getIsBuilt()) continue;
+            const pos = building.getPosition ? building.getPosition() : building.position;
+            if (!pos) continue;
+            const radius = typeof building.getSize === 'function' ? building.getSize() : building.size;
+            if (!radius) continue;
+            obstacles.push({ x: pos.x, z: pos.z, radius });
+        }
+
+        for (const enemy of enemies) {
+            if (!enemy || enemy.isDestroyed) continue;
+            const pos = enemy.getPosition ? enemy.getPosition() : enemy.position;
+            if (!pos) continue;
+            const radius = enemy.playerCollisionRadius || 0;
+            if (!radius) continue;
+            obstacles.push({ x: pos.x, z: pos.z, radius });
+        }
+
+        for (const site of constructionSites) {
+            if (!site) continue;
+            const pos = site.getPosition ? site.getPosition() : site.position;
+            if (!pos) continue;
+            const radius = site.buildItem && site.buildItem.size ? site.buildItem.size : 1.5;
+            obstacles.push({ x: pos.x, z: pos.z, radius });
+        }
+
+        return obstacles;
+    }
+
+    resolveCollisions(position, obstacles, mapSystem) {
+        let resolved = position.clone();
+        const minDistance = 0.0001;
+
+        for (let iteration = 0; iteration < 3; iteration++) {
+            let moved = false;
+
+            for (const obstacle of obstacles) {
+                const dx = resolved.x - obstacle.x;
+                const dz = resolved.z - obstacle.z;
+                const distance = Math.hypot(dx, dz);
+                const targetDistance = this.collisionRadius + obstacle.radius;
+
+                if (distance < targetDistance) {
+                    if (distance > minDistance) {
+                        const push = targetDistance - distance;
+                        resolved.x += (dx / distance) * push;
+                        resolved.z += (dz / distance) * push;
+                    } else {
+                        resolved.x += targetDistance;
+                    }
+                    moved = true;
+                }
+            }
+
+            const clamped = mapSystem ? mapSystem.clampPosition(resolved.x, resolved.z) : null;
+            if (clamped && (clamped.x !== resolved.x || clamped.z !== resolved.z)) {
+                resolved.x = clamped.x;
+                resolved.z = clamped.z;
+                moved = true;
+            }
+
+            if (!moved) break;
+        }
+
+        return resolved;
     }
 
     canInteractWith(tree) {

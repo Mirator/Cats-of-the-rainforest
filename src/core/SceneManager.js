@@ -170,7 +170,7 @@ export class SceneManager {
         this.transitionStartTime = performance.now();
     }
     
-    updateDayNightTransition(deltaTime) {
+    updateDayNightTransition(deltaTime, mapSystem = null) {
         if (!this.isTransitioning) {
             return;
         }
@@ -243,6 +243,11 @@ export class SceneManager {
         this.scene.fog.color.copy(this.currentFogColor);
         this.scene.fog.near = this.currentFogNear;
         this.scene.fog.far = this.currentFogFar;
+
+        if (mapSystem && typeof mapSystem.updateGroundColors === 'function') {
+            const nightMix = this.targetVisualState === 'night' ? eased : 1 - eased;
+            mapSystem.updateGroundColors(nightMix);
+        }
         
         // Check if transition is complete
         if (this.transitionProgress >= 1) {
@@ -256,6 +261,11 @@ export class SceneManager {
             this.scene.fog.color.setHex(targetFogColor);
             this.scene.fog.near = targetFogNear;
             this.scene.fog.far = targetFogFar;
+
+            if (mapSystem && typeof mapSystem.updateGroundColors === 'function') {
+                const nightMix = this.currentVisualState === 'night' ? 1 : 0;
+                mapSystem.updateGroundColors(nightMix);
+            }
             
             // Update current values to match
             this.currentAmbientIntensity = targetAmbient;
