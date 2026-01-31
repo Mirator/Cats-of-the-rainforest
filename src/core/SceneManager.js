@@ -39,12 +39,13 @@ export class SceneManager {
     init() {
         // Create renderer
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        const { width, height } = this.getContainerSize();
+        this.renderer.setSize(width, height);
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.container.appendChild(this.renderer.domElement);
         
         // Create camera (positioned for 2.5D view)
-        const aspect = window.innerWidth / window.innerHeight;
+        const aspect = width / height;
         this.camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
         // Camera offset from player (closer for better zoom)
         this.cameraOffset = new THREE.Vector3(
@@ -80,6 +81,10 @@ export class SceneManager {
         
         // Handle window resize
         window.addEventListener('resize', this.handleResize);
+        if (window.ResizeObserver) {
+            this.resizeObserver = new ResizeObserver(() => this.onWindowResize());
+            this.resizeObserver.observe(this.container);
+        }
         
         // Update mouse position for raycaster
         window.addEventListener('mousemove', this.handleMouseMove);
@@ -88,12 +93,24 @@ export class SceneManager {
     destroy() {
         window.removeEventListener('resize', this.handleResize);
         window.removeEventListener('mousemove', this.handleMouseMove);
+        if (this.resizeObserver) {
+            this.resizeObserver.disconnect();
+        }
     }
     
     onWindowResize() {
-        this.camera.aspect = window.innerWidth / window.innerHeight;
+        const { width, height } = this.getContainerSize();
+        this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setSize(width, height);
+    }
+
+    getContainerSize() {
+        const { width, height } = this.container.getBoundingClientRect();
+        return {
+            width: Math.max(1, width),
+            height: Math.max(1, height)
+        };
     }
     
     updateCamera(targetPosition, mapSystem) {
