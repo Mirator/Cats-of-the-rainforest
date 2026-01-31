@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { BUILD_CONFIG } from '../config/build.js';
+import { BUILDING_CONFIG } from '../config/buildings.js';
 import { COMBAT_CONFIG } from '../config/combat.js';
 import { CONTROLS } from '../config/controls.js';
 
@@ -15,7 +16,7 @@ export class BuildModeSystem {
         this.selectedBuildItem = null;
         this.placementCursorPosition = new THREE.Vector3(0, 0, 0);
         this.gridSize = BUILD_CONFIG.gridSize;
-        this.totemInfluenceRadius = BUILD_CONFIG.totemInfluenceRadius;
+        this.totemInfluenceRadius = BUILDING_CONFIG.forestTotem.influenceRadius;
         
         // Buildable items configuration
         this.buildItems = BUILD_CONFIG.buildItems;
