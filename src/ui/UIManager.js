@@ -14,8 +14,14 @@ export class UIManager {
         // Progress bars for tree interactions
         this.treeProgressBars = new Map(); // Map<Tree, HTMLElement>
         
+        // Progress bars for Cat Den interactions
+        this.catDenProgressBars = new Map(); // Map<CatDen, HTMLElement>
+        
         // Tooltips for interactable objects
         this.tooltips = new Map(); // Map<Object, HTMLElement>
+        
+        // Totem health bar
+        this.totemHealthBar = null;
         
         // Build mode UI elements
         this.buildMenu = null;
@@ -30,6 +36,7 @@ export class UIManager {
         this.createUI();
         this.createEdgeIndicators();
         this.createBuildModeUI();
+        this.createTotemHealthBar();
     }
     
     createUI() {
@@ -300,6 +307,55 @@ export class UIManager {
         });
     }
     
+    createTotemHealthBar() {
+        // Create totem health bar display in UI corner
+        this.totemHealthBar = document.createElement('div');
+        this.totemHealthBar.style.cssText = `
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 20px;
+            border-radius: 8px;
+            pointer-events: none;
+            min-width: 200px;
+        `;
+        this.totemHealthBar.innerHTML = `
+            <div style="font-size: 18px; font-weight: bold; margin-bottom: 8px; text-align: center;">Forest Totem</div>
+            <div style="width: 180px; height: 20px; background: rgba(255, 0, 0, 0.3); border: 2px solid rgba(255, 255, 255, 0.8); border-radius: 4px; margin: 0 auto;">
+                <div id="totem-health-fill" style="width: 100%; height: 100%; background: linear-gradient(90deg, #4a7c59, #5a8c69); border-radius: 2px; transition: width 0.2s;"></div>
+            </div>
+            <div id="totem-health-text" style="margin-top: 5px; text-align: center; font-size: 14px;">100/100</div>
+        `;
+        this.container.appendChild(this.totemHealthBar);
+    }
+    
+    updateTotemHealth(current, max) {
+        if (!this.totemHealthBar) return;
+        
+        const healthFill = this.totemHealthBar.querySelector('#totem-health-fill');
+        const healthText = this.totemHealthBar.querySelector('#totem-health-text');
+        
+        if (healthFill) {
+            const percentage = Math.max(0, Math.min(100, (current / max) * 100));
+            healthFill.style.width = `${percentage}%`;
+            
+            // Change color based on health percentage
+            if (percentage > 60) {
+                healthFill.style.background = 'linear-gradient(90deg, #4a7c59, #5a8c69)'; // Green
+            } else if (percentage > 30) {
+                healthFill.style.background = 'linear-gradient(90deg, #ffa500, #ff8c00)'; // Orange
+            } else {
+                healthFill.style.background = 'linear-gradient(90deg, #ff4444, #cc0000)'; // Red
+            }
+        }
+        
+        if (healthText) {
+            healthText.textContent = `${Math.max(0, Math.round(current))}/${max}`;
+        }
+    }
+    
     updateEnemyDirectionIndicators(enemies, camera, playerPosition) {
         if (!enemies || enemies.length === 0 || !camera || !playerPosition) {
             // Hide all indicators if no enemies or missing data
@@ -415,6 +471,14 @@ export class UIManager {
         this.endDayButton.style.cursor = enabled ? 'pointer' : 'not-allowed';
     }
     
+    setBuildButtonEnabled(enabled) {
+        if (!this.buildButton) return;
+        this.buildButton.disabled = !enabled;
+        this.buildButton.style.opacity = enabled ? '1' : '0.5';
+        this.buildButton.style.cursor = enabled ? 'pointer' : 'not-allowed';
+        this.buildButton.style.background = enabled ? '#6a5a4a' : '#4a4a4a';
+    }
+    
     updateWaveInfo(waveNumber, enemiesKilled, enemiesTotal) {
         const waveNumberEl = this.dayDisplay.querySelector('#wave-number');
         const enemiesKilledEl = this.dayDisplay.querySelector('#enemies-killed');
@@ -471,12 +535,12 @@ export class UIManager {
         const gameOverScreen = document.createElement('div');
         gameOverScreen.id = 'game-over-screen';
         gameOverScreen.style.cssText = `
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(0, 0, 0, 0.95);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -484,12 +548,41 @@ export class UIManager {
             z-index: 2000;
             color: white;
             font-family: Arial, sans-serif;
+            pointer-events: auto;
         `;
+        
+        const restartButton = document.createElement('button');
+        restartButton.textContent = 'Restart';
+        restartButton.style.cssText = `
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            background: #4a7c59;
+            color: white;
+            border: 2px solid #228b22;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.2s;
+        `;
+        restartButton.addEventListener('mouseenter', () => {
+            restartButton.style.background = '#5a8c69';
+            restartButton.style.transform = 'scale(1.05)';
+        });
+        restartButton.addEventListener('mouseleave', () => {
+            restartButton.style.background = '#4a7c59';
+            restartButton.style.transform = 'scale(1)';
+        });
+        restartButton.addEventListener('click', () => {
+            window.location.reload();
+        });
+        
         gameOverScreen.innerHTML = `
-            <h1 style="font-size: 48px; margin-bottom: 20px; color: #ff4444;">Game Over</h1>
-            <p style="font-size: 24px; margin-bottom: 40px;">The Forest Totem has been destroyed!</p>
-            <p style="font-size: 18px; color: #aaa;">Refresh the page to try again.</p>
+            <h1 style="font-size: 48px; margin-bottom: 20px; color: #ff4444;">The Forest Has Fallen</h1>
+            <p style="font-size: 24px; margin-bottom: 40px; text-align: center;">The Forest Totem has been destroyed!</p>
+            <p style="font-size: 18px; color: #aaa; text-align: center; max-width: 600px; margin-bottom: 20px;">The masked mice have overwhelmed the forest. The totem crumbles, and darkness spreads across the land.</p>
         `;
+        gameOverScreen.appendChild(restartButton);
         document.body.appendChild(gameOverScreen);
     }
     
@@ -591,6 +684,111 @@ export class UIManager {
         }
     }
     
+    showCatDenProgressBar(catDen, progress, camera) {
+        if (!catDen || !camera || !catDen.mesh) return;
+        
+        // Calculate world position above Cat Den
+        const worldPosition = catDen.getPosition().clone();
+        worldPosition.y += 3; // Position bar 3 units above Cat Den base
+        
+        // Project to screen coordinates
+        const screenPosition = worldPosition.clone();
+        screenPosition.project(camera);
+        
+        // Convert to pixel coordinates
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const x = (screenPosition.x * 0.5 + 0.5) * width;
+        const y = (-screenPosition.y * 0.5 + 0.5) * height;
+        
+        // Check if position is on screen
+        if (screenPosition.z > 1 || x < 0 || x > width || y < 0 || y > height) {
+            this.hideCatDenProgressBar(catDen);
+            return;
+        }
+        
+        // Get or create progress bar element
+        let progressBar = this.catDenProgressBars.get(catDen);
+        
+        if (!progressBar) {
+            progressBar = document.createElement('div');
+            progressBar.className = 'cat-den-progress-bar';
+            progressBar.style.cssText = `
+                position: fixed;
+                width: 120px;
+                height: 20px;
+                background: rgba(0, 0, 0, 0.7);
+                border: 2px solid rgba(255, 255, 255, 0.8);
+                border-radius: 4px;
+                pointer-events: none;
+                z-index: 1500;
+                transform: translate(-50%, -50%);
+            `;
+            
+            // Progress fill
+            const progressFill = document.createElement('div');
+            progressFill.className = 'cat-den-progress-fill';
+            progressFill.style.cssText = `
+                width: 0%;
+                height: 100%;
+                background: linear-gradient(90deg, #8b7355, #a0826d);
+                border-radius: 2px;
+                transition: width 0.1s linear;
+            `;
+            progressBar.appendChild(progressFill);
+            
+            document.body.appendChild(progressBar);
+            this.catDenProgressBars.set(catDen, progressBar);
+        }
+        
+        // Update position
+        progressBar.style.left = `${x}px`;
+        progressBar.style.top = `${y}px`;
+        
+        // Update progress
+        const progressFill = progressBar.querySelector('.cat-den-progress-fill');
+        if (progressFill) {
+            const progressPercent = Math.min(100, Math.max(0, progress * 100));
+            progressFill.style.width = `${progressPercent}%`;
+        }
+    }
+    
+    hideCatDenProgressBar(catDen) {
+        const progressBar = this.catDenProgressBars.get(catDen);
+        if (progressBar) {
+            progressBar.remove();
+            this.catDenProgressBars.delete(catDen);
+        }
+    }
+    
+    updateCatDenProgressBars(buildings, camera) {
+        // Hide progress bars for Cat Dens that are no longer interacting
+        const interactingCatDens = new Set();
+        
+        for (const building of buildings) {
+            // Check if it's a CatDen by checking for CatDen-specific properties
+            const isCatDen = building && typeof building.updateInteraction === 'function' && 
+                           typeof building.startInteraction === 'function' &&
+                           typeof building.getIsBuilt === 'function';
+            
+            if (isCatDen && building.getIsBuilt()) {
+                if (building.isInteracting) {
+                    interactingCatDens.add(building);
+                    this.showCatDenProgressBar(building, building.interactionProgress, camera);
+                } else {
+                    this.hideCatDenProgressBar(building);
+                }
+            }
+        }
+        
+        // Clean up any orphaned progress bars
+        for (const [catDen, bar] of this.catDenProgressBars.entries()) {
+            if (!interactingCatDens.has(catDen)) {
+                this.hideCatDenProgressBar(catDen);
+            }
+        }
+    }
+    
     showTooltip(target, config, camera) {
         if (!target || !camera || !target.getPosition) return;
         
@@ -653,7 +851,14 @@ export class UIManager {
         if (config.cost) {
             const costText = this.formatCost(config.cost);
             if (costText) {
-                content += `<div style="margin-top: 4px; font-size: 12px; color: #aaa; border-top: 1px solid rgba(255, 255, 255, 0.2); padding-top: 4px;">${costText}</div>`;
+                let costsText = costText;
+                if (config.secondaryCost) {
+                    const secondaryCostText = this.formatCost(config.secondaryCost);
+                    if (secondaryCostText) {
+                        costsText += `, ${secondaryCostText}`;
+                    }
+                }
+                content += `<div style="margin-top: 4px; font-size: 12px; color: #aaa; border-top: 1px solid rgba(255, 255, 255, 0.2); padding-top: 4px;">${costsText}</div>`;
             }
         }
         

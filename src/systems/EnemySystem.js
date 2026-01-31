@@ -157,7 +157,7 @@ export class EnemySystem {
         return true;
     }
 
-    update(deltaTime, pathfindingSystem, totem, trees) {
+    update(deltaTime, pathfindingSystem, totem, trees, player) {
         // Update all enemies
         const destroyedIndices = [];
 
@@ -169,13 +169,32 @@ export class EnemySystem {
                 continue;
             }
 
-            // Update mouse
-            const collided = mouse.update(deltaTime, pathfindingSystem, totem.getPosition(), trees);
+            // Check for player collision (blocking)
+            if (player && !mouse.targetPlayer) {
+                const playerPos = player.getPosition();
+                const mousePos = mouse.getPosition();
+                const distance = playerPos.distanceTo(mousePos);
+                const collisionRadius = mouse.playerCollisionRadius + 0.8; // Player radius ~0.8
+                
+                if (distance < collisionRadius) {
+                    // Enemy collides with player - stop and target player
+                    mouse.targetPlayer = true;
+                    mouse.stopMovement = true;
+                }
+            }
 
-            if (collided) {
-                // Mouse reached totem - deal damage
-                totem.takeDamage(mouse.getDamageAmount());
-                destroyedIndices.push(i);
+            // Update mouse (pass player for collision checks)
+            const attackedTotem = mouse.update(deltaTime, pathfindingSystem, totem.getPosition(), trees, player);
+
+            if (attackedTotem) {
+                // Mouse is attacking totem - deal damage continuously
+                const totemDestroyed = totem.takeDamage(mouse.getDamageAmount());
+                // Don't destroy enemy immediately - let it attack continuously
+                // Enemy will be destroyed when totem is destroyed or enemy is killed
+                if (totemDestroyed) {
+                    // Totem destroyed - mark all enemies for cleanup
+                    // Game over will be handled in Game.js
+                }
             }
         }
 

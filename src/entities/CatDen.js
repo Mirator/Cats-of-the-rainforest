@@ -11,6 +11,11 @@ export class CatDen extends BaseModel {
         
         this.size = 1.5; // Collision radius
         this.isBuilt = false;
+        
+        // Interaction state (similar to Tree)
+        this.isInteracting = false;
+        this.interactionProgress = 0.0; // 0.0 to 1.0
+        this.interactionDuration = 3.0; // 3 seconds to spawn cat
     }
     
     onModelLoadedInternal() {
@@ -32,6 +37,40 @@ export class CatDen extends BaseModel {
     
     getIsBuilt() {
         return this.isBuilt;
+    }
+    
+    canInteract(playerPosition, daySystem) {
+        if (!this.isBuilt) return false;
+        if (!daySystem || !daySystem.isDay()) return false;
+        
+        const distance = playerPosition.distanceTo(this.position);
+        return distance <= 2.5; // Interaction range
+    }
+    
+    getSpawnCost() {
+        return { food: 1, stamina: 1 };
+    }
+    
+    startInteraction() {
+        if (!this.isBuilt) return;
+        this.isInteracting = true;
+        this.interactionProgress = 0.0;
+    }
+    
+    updateInteraction(deltaTime) {
+        if (!this.isInteracting || !this.isBuilt) return;
+        
+        this.interactionProgress += deltaTime / this.interactionDuration;
+        
+        if (this.interactionProgress >= 1.0) {
+            this.interactionProgress = 1.0;
+            this.isInteracting = false;
+        }
+    }
+    
+    stopInteraction() {
+        this.isInteracting = false;
+        this.interactionProgress = 0.0;
     }
     
     // Override createPlaceholder to create a simple cube (50% larger)

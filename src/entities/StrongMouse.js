@@ -26,6 +26,19 @@ export class StrongMouse extends Mouse {
         this.waypointReachDistance = 0.5;
         this.lastPathUpdateTime = 0;
         this.pathUpdateInterval = 1.0;
+        
+        // Player blocking state
+        this.targetPlayer = false;
+        this.playerCollisionRadius = 0.8;
+        this.attackCooldown = 1.0; // seconds
+        this.lastAttackTime = 0;
+        this.playerDamage = 1;
+        this.stopMovement = false;
+        
+        // Totem attack state
+        this.attackingTotem = false;
+        this.totemAttackCooldown = 1.0; // seconds
+        this.lastTotemAttackTime = 0;
 
         // Create model with wrapped callback to apply scale
         this.model = new MouseModel(this.position, {

@@ -27,6 +27,14 @@ export class BuildModeSystem {
                 staminaCost: 1,
                 icon: '', // No icon
                 size: 1.5 // Collision radius
+            },
+            'tower': {
+                id: 'tower',
+                name: 'Tower',
+                woodCost: 5,
+                staminaCost: 1,
+                icon: '', // No icon
+                size: 1.5 // Collision radius
             }
         };
     }

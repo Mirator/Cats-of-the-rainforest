@@ -23,6 +23,19 @@ export class Mouse {
         this.waypointReachDistance = 0.5; // Distance to consider waypoint reached
         this.lastPathUpdateTime = 0;
         this.pathUpdateInterval = 1.0; // Recalculate path max once per second
+        
+        // Player blocking state
+        this.targetPlayer = false;
+        this.playerCollisionRadius = 0.8;
+        this.attackCooldown = 1.0; // seconds
+        this.lastAttackTime = 0;
+        this.playerDamage = 1;
+        this.stopMovement = false;
+        
+        // Totem attack state
+        this.attackingTotem = false;
+        this.totemAttackCooldown = 1.0; // seconds
+        this.lastTotemAttackTime = 0;
 
         this.model = new MouseModel(this.position, {
             onModelLoaded: ({ mesh, yOffset }) => {
@@ -44,10 +57,86 @@ export class Mouse {
         return this.position;
     }
 
-    update(deltaTime, pathfindingSystem, totemPosition, trees = []) {
-        if (this.isDestroyed) return;
+    update(deltaTime, pathfindingSystem, totemPosition, trees = [], player = null) {
+        if (this.isDestroyed) return false;
 
         const currentTime = Date.now() / 1000; // Convert to seconds
+        
+        // Check if attacking totem (continuous attacks)
+        const distanceToTotem = this.position.distanceTo(totemPosition);
+        if (distanceToTotem < 1.5) {
+            this.attackingTotem = true;
+            this.stopMovement = true;
+            
+            // Attack totem at intervals
+            const timeSinceLastAttack = currentTime - this.lastTotemAttackTime;
+            if (timeSinceLastAttack >= this.totemAttackCooldown) {
+                this.lastTotemAttackTime = currentTime;
+                return true; // Return true to indicate totem attack
+            }
+            return false; // Still attacking, but not this frame
+        } else {
+            this.attackingTotem = false;
+        }
+        
+        // Handle player blocking - attack player if in range
+        if (this.targetPlayer && player) {
+            const playerPos = player.getPosition();
+            const distanceToPlayer = this.position.distanceTo(playerPos);
+            const attackRange = this.playerCollisionRadius + 0.8; // Player radius
+            
+            if (distanceToPlayer < attackRange) {
+                // Attack player
+                this.stopMovement = true;
+                const timeSinceLastAttack = currentTime - this.lastAttackTime;
+                if (timeSinceLastAttack >= this.attackCooldown) {
+                    player.takeDamage(this.playerDamage);
+                    this.lastAttackTime = currentTime;
+                }
+                
+                // Face player
+                if (this.mesh) {
+                    const dx = playerPos.x - this.position.x;
+                    const dz = playerPos.z - this.position.z;
+                    const angle = Math.atan2(dx, dz) + Math.PI;
+                    this.mesh.rotation.y = angle;
+                }
+                
+                // Update mesh position
+                if (this.mesh) {
+                    this.mesh.position.x = this.position.x;
+                    this.mesh.position.y = this.position.y + this.yOffset;
+                    this.mesh.position.z = this.position.z;
+                    
+                    // Update animation (idle when attacking)
+                    if (this.model && this.model.updateAnimation) {
+                        this.model.updateAnimation(deltaTime, false);
+                    }
+                }
+                
+                return false; // Don't move toward totem while attacking player
+            } else {
+                // Player moved away, resume movement
+                this.targetPlayer = false;
+                this.stopMovement = false;
+            }
+        }
+        
+        // Don't move if stopped
+        if (this.stopMovement) {
+            // Update mesh position
+            if (this.mesh) {
+                this.mesh.position.x = this.position.x;
+                this.mesh.position.y = this.position.y + this.yOffset;
+                this.mesh.position.z = this.position.z;
+                
+                // Update animation (idle)
+                if (this.model && this.model.updateAnimation) {
+                    this.model.updateAnimation(deltaTime, false);
+                }
+            }
+            return false;
+        }
         
         // Get or update path
         if (!this.currentPath || 
@@ -118,16 +207,8 @@ export class Mouse {
             
             // Update animation
             if (this.model && this.model.updateAnimation) {
-                this.model.updateAnimation(deltaTime, true); // Always moving when updating
+                this.model.updateAnimation(deltaTime, true); // Moving
             }
-        }
-
-        // Check collision with totem
-        const distanceToTotem = this.position.distanceTo(totemPosition);
-        if (distanceToTotem < 1.5) {
-            // Reached totem - mark for destruction
-            this.isDestroyed = true;
-            return true; // Return true to indicate collision
         }
 
         return false;

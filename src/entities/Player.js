@@ -9,6 +9,17 @@ export class Player {
         this.interactionRange = 2.5;
         this.modelLoaded = false;
         this.yOffset = 0.5;
+        
+        // Combat properties
+        this.attackRange = 1.5;
+        this.attackDamage = 1;
+        this.attackCooldown = 0.8; // seconds
+        this.lastAttackTime = 0;
+        this.attackArc = 120 * (Math.PI / 180); // 120 degrees in radians
+        
+        // Health properties
+        this.maxHealth = 10;
+        this.currentHealth = 10;
 
         this.model = new PlayerModel(this.position, {
             onModelLoaded: ({ mesh, yOffset }) => {
@@ -60,5 +71,95 @@ export class Player {
 
     canInteractWith(tree) {
         return tree && !tree.isCut && tree.isWithinRange(this.position);
+    }
+    
+    canAttack() {
+        const currentTime = Date.now() / 1000;
+        const timeSinceLastAttack = currentTime - this.lastAttackTime;
+        return timeSinceLastAttack >= this.attackCooldown;
+    }
+    
+    getEnemiesInRange(enemies) {
+        if (!enemies || enemies.length === 0) return [];
+        
+        const hitEnemies = [];
+        const playerPos = this.position;
+        
+        for (const enemy of enemies) {
+            if (enemy.isDestroyed) continue;
+            
+            const enemyPos = enemy.getPosition();
+            const distance = playerPos.distanceTo(enemyPos);
+            
+            // Check if enemy is within attack range
+            if (distance > this.attackRange) continue;
+            
+            // Check if enemy is within attack arc (in front of player)
+            if (this.mesh) {
+                const playerForward = new THREE.Vector3(
+                    Math.sin(this.mesh.rotation.y),
+                    0,
+                    Math.cos(this.mesh.rotation.y)
+                );
+                
+                const toEnemy = new THREE.Vector3(
+                    enemyPos.x - playerPos.x,
+                    0,
+                    enemyPos.z - playerPos.z
+                ).normalize();
+                
+                const dot = playerForward.dot(toEnemy);
+                const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
+                
+                // Check if within attack arc (half arc on each side)
+                if (angle <= this.attackArc / 2) {
+                    hitEnemies.push(enemy);
+                }
+            }
+        }
+        
+        return hitEnemies;
+    }
+    
+    attack(deltaTime, enemies) {
+        if (!this.canAttack()) {
+            return false;
+        }
+        
+        const hitEnemies = this.getEnemiesInRange(enemies);
+        
+        if (hitEnemies.length > 0) {
+            // Deal damage to all hit enemies
+            for (const enemy of hitEnemies) {
+                enemy.takeDamage(this.attackDamage);
+            }
+            
+            // Reset cooldown
+            this.lastAttackTime = Date.now() / 1000;
+            return true;
+        }
+        
+        return false;
+    }
+    
+    takeDamage(amount) {
+        this.currentHealth = Math.max(0, this.currentHealth - amount);
+        return this.isDead();
+    }
+    
+    isDead() {
+        return this.currentHealth <= 0;
+    }
+    
+    getHealth() {
+        return this.currentHealth;
+    }
+    
+    getMaxHealth() {
+        return this.maxHealth;
+    }
+    
+    getMaskColor() {
+        return this.model ? this.model.getMaskColor() : null;
     }
 }
