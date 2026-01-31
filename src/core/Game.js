@@ -6,10 +6,16 @@ import { DaySystem, DayState } from '../systems/DaySystem.js';
 import { PathfindingSystem } from '../systems/PathfindingSystem.js';
 import { EnemySystem } from '../systems/EnemySystem.js';
 import { WaveSystem } from '../systems/WaveSystem.js';
+import { BuildModeSystem, BuildModeState } from '../systems/BuildModeSystem.js';
 import { Player } from '../entities/Player.js';
 import { Tree } from '../entities/Tree.js';
 import { ForestTotem } from '../entities/ForestTotem.js';
+import { CatDen } from '../entities/CatDen.js';
+import { ConstructionSite } from '../entities/ConstructionSite.js';
+import { GhostPreview } from '../entities/GhostPreview.js';
+import { PlacementCursor } from '../entities/PlacementCursor.js';
 import { UIManager } from '../ui/UIManager.js';
+import * as THREE from 'three';
 
 export class Game {
     constructor(container) {
@@ -23,11 +29,21 @@ export class Game {
         this.pathfindingSystem = null;
         this.enemySystem = null;
         this.waveSystem = null;
+        this.buildModeSystem = null;
         
         this.player = null;
         this.trees = [];
         this.forestTotem = null;
+        this.buildings = []; // Track all buildings
+        this.constructionSites = []; // Track construction sites
         this.treesChanged = false; // Track if trees changed for pathfinding update
+        
+        // Build mode entities
+        this.ghostPreview = null;
+        this.placementCursor = null;
+        this.totemInfluenceVisualization = null;
+        this.usingKeyboardPlacement = false;
+        this.buildModeTogglePressed = false;
         
         this.lastTime = 0;
         this.isRunning = false;
@@ -45,6 +61,7 @@ export class Game {
         this.mapSystem = new MapSystem(this.sceneManager.scene);
         this.resourceSystem = new ResourceSystem();
         this.daySystem = new DaySystem();
+        this.buildModeSystem = new BuildModeSystem();
         this.uiManager = new UIManager();
         
         // Initialize player at starting position
@@ -93,6 +110,9 @@ export class Game {
         // Setup UI callbacks
         this.setupUICallbacks();
         
+        // Setup build mode callbacks
+        this.setupBuildModeCallbacks();
+        
         // Setup resource system listeners
         this.resourceSystem.onResourceChange((resources) => {
             this.uiManager.updateResources(resources.food, resources.wood);
@@ -110,6 +130,10 @@ export class Game {
             
             // Start wave when night starts
             if (dayInfo.state === DayState.NIGHT) {
+                // Exit build mode when night starts
+                if (this.buildModeSystem.isActive()) {
+                    this.exitBuildMode();
+                }
                 this.startWave();
             }
         });
@@ -194,6 +218,157 @@ export class Game {
         });
     }
     
+    setupBuildModeCallbacks() {
+        // Build button callback
+        this.uiManager.setBuildButtonCallback(() => {
+            this.toggleBuildMode();
+        });
+    }
+    
+    toggleBuildMode() {
+        // Can only enter build mode during day
+        if (!this.daySystem.isDay() && !this.buildModeSystem.isActive()) {
+            return;
+        }
+        
+        const wasActive = this.buildModeSystem.isActive();
+        this.buildModeSystem.toggleBuildMode();
+        
+        if (this.buildModeSystem.isActive()) {
+            this.enterBuildMode();
+        } else {
+            this.exitBuildMode();
+        }
+    }
+    
+    enterBuildMode() {
+        // Show build menu
+        const buildItems = this.buildModeSystem.getBuildItems();
+        this.uiManager.showBuildMenu(
+            buildItems,
+            (itemId) => this.buildModeSystem.canAffordBuildItem(itemId, this.daySystem, this.resourceSystem),
+            (itemId) => this.selectBuildItem(itemId)
+        );
+        
+        // Set build mode active visuals
+        this.uiManager.setBuildModeActive(true);
+        
+        // Show build instructions
+        this.uiManager.showBuildInstructions(this.buildModeSystem.isInMenu());
+        
+        // Initialize placement cursor at player position
+        const playerPos = this.player.getPosition();
+        this.buildModeSystem.initializePlacementCursor(playerPos);
+    }
+    
+    exitBuildMode() {
+        // Hide build menu
+        this.uiManager.hideBuildMenu();
+        
+        // Hide build instructions
+        this.uiManager.hideBuildInstructions();
+        
+        // Remove build mode visuals
+        this.uiManager.setBuildModeActive(false);
+        
+        // Remove ghost preview and placement cursor
+        if (this.ghostPreview) {
+            this.sceneManager.remove(this.ghostPreview.getMesh());
+            this.ghostPreview.remove();
+            this.ghostPreview = null;
+        }
+        
+        if (this.placementCursor) {
+            this.sceneManager.remove(this.placementCursor.getMesh());
+            this.placementCursor.remove();
+            this.placementCursor = null;
+        }
+        
+        // Hide totem influence visualization
+        this.hideTotemInfluenceVisualization();
+        
+        // Exit build mode system
+        this.buildModeSystem.exitBuildMode();
+        this.usingKeyboardPlacement = false;
+    }
+    
+    selectBuildItem(itemId) {
+        if (this.buildModeSystem.selectBuildItem(itemId)) {
+            // Hide build menu
+            this.uiManager.hideBuildMenu();
+            
+            // Update instructions for placement mode
+            this.uiManager.showBuildInstructions(false);
+            
+            // Create ghost preview
+            const buildItem = this.buildModeSystem.getSelectedBuildItem();
+            if (buildItem) {
+                this.ghostPreview = new GhostPreview(buildItem);
+                this.sceneManager.add(this.ghostPreview.getMesh());
+                
+                // Show totem influence radius
+                this.showTotemInfluenceVisualization();
+            }
+        }
+    }
+    
+    showTotemInfluenceVisualization() {
+        if (this.totemInfluenceVisualization) {
+            this.hideTotemInfluenceVisualization();
+        }
+        
+        const totemPos = this.forestTotem.getPosition();
+        const radius = this.buildModeSystem.getTotemInfluenceRadius();
+        
+        // Create a ring geometry to show influence radius
+        const ringGeometry = new THREE.RingGeometry(radius - 0.1, radius, 64);
+        const ringMaterial = new THREE.MeshBasicMaterial({
+            color: 0x00ff00,
+            transparent: true,
+            opacity: 0.3,
+            side: THREE.DoubleSide
+        });
+        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.set(totemPos.x, 0.01, totemPos.z);
+        
+        // Add a semi-transparent circle
+        const circleGeometry = new THREE.CircleGeometry(radius, 64);
+        const circleMaterial = new THREE.MeshBasicMaterial({
+            color: 0x00ff00,
+            transparent: true,
+            opacity: 0.1,
+            side: THREE.DoubleSide
+        });
+        const circle = new THREE.Mesh(circleGeometry, circleMaterial);
+        circle.rotation.x = -Math.PI / 2;
+        circle.position.set(totemPos.x, 0.01, totemPos.z);
+        
+        const group = new THREE.Group();
+        group.add(ring);
+        group.add(circle);
+        
+        this.totemInfluenceVisualization = group;
+        this.sceneManager.add(group);
+    }
+    
+    hideTotemInfluenceVisualization() {
+        if (this.totemInfluenceVisualization) {
+            this.sceneManager.remove(this.totemInfluenceVisualization);
+            this.totemInfluenceVisualization = null;
+        }
+    }
+    
+    // Helper method to clean up placement visuals (reduces code duplication)
+    cancelPlacementVisuals() {
+        if (this.ghostPreview) {
+            this.sceneManager.remove(this.ghostPreview.getMesh());
+            this.ghostPreview.remove();
+            this.ghostPreview = null;
+        }
+        this.hideTotemInfluenceVisualization();
+    }
+    
     update(deltaTime) {
         // Update game time
         this.gameTime += deltaTime;
@@ -201,8 +376,13 @@ export class Game {
         // Update input
         this.inputManager.update();
         
-        // Update player
-        this.player.update(deltaTime, this.inputManager, this.mapSystem);
+        // Handle build mode
+        this.handleBuildMode(deltaTime);
+        
+        // Update player (disable movement when in build mode placement)
+        if (!this.buildModeSystem.isInPlacement()) {
+            this.player.update(deltaTime, this.inputManager, this.mapSystem);
+        }
         
         // Update camera to follow player (pass mapSystem for boundary slowdown)
         this.sceneManager.updateCamera(this.player.getPosition(), this.mapSystem);
@@ -316,10 +496,230 @@ export class Game {
             }
         }
         
+        // Update construction sites
+        for (const site of this.constructionSites) {
+            site.update(deltaTime);
+            
+            if (site.isConstructionComplete()) {
+                // Create final building
+                const sitePos = site.getPosition();
+                const building = new CatDen(sitePos.x, sitePos.z);
+                building.build();
+                this.buildings.push(building);
+                this.sceneManager.add(building.getMesh());
+                building.init();
+                
+                // Remove construction site
+                site.remove();
+                this.sceneManager.remove(site.getMesh());
+            }
+        }
+        
+        // Remove completed construction sites
+        this.constructionSites = this.constructionSites.filter(site => !site.isConstructionComplete());
+        
         // Check for game over (totem destroyed)
         if (this.forestTotem.isDestroyed()) {
             this.handleGameOver();
         }
+        
+        // Exit build mode if stamina reaches zero
+        if (this.buildModeSystem.isActive() && !this.daySystem.hasStamina()) {
+            this.exitBuildMode();
+        }
+    }
+    
+    handleBuildMode(deltaTime) {
+        if (!this.buildModeSystem.isActive()) {
+            return;
+        }
+        
+        // Handle B key toggle
+        if (this.inputManager.isKeyPressed('b')) {
+            // Use a flag to prevent multiple toggles in one frame
+            if (!this.buildModeTogglePressed) {
+                this.toggleBuildMode();
+                this.buildModeTogglePressed = true;
+            }
+        } else {
+            this.buildModeTogglePressed = false;
+        }
+        
+        // Handle Esc key to exit build mode
+        if (this.inputManager.isKeyPressed('Escape')) {
+            if (this.buildModeSystem.isActive()) {
+                // If in placement, cancel placement first
+                if (this.buildModeSystem.isInPlacement()) {
+                    this.cancelPlacementVisuals();
+                }
+                // Exit build mode completely
+                this.exitBuildMode();
+            }
+        }
+        
+        // Handle build mode menu state
+        if (this.buildModeSystem.isInMenu()) {
+            this.handleBuildMenuInput();
+        }
+        
+        // Handle placement state
+        if (this.buildModeSystem.isInPlacement()) {
+            this.handlePlacementMode(deltaTime);
+        }
+    }
+    
+    handleBuildMenuInput() {
+        const buildItems = this.buildModeSystem.getBuildItems();
+        const itemIds = Object.keys(buildItems);
+        
+        // Number key selection (1-9)
+        for (let i = 0; i < Math.min(itemIds.length, 9); i++) {
+            const key = String(i + 1);
+            if (this.inputManager.isKeyPressed(key)) {
+                const itemId = itemIds[i];
+                if (this.buildModeSystem.canAffordBuildItem(itemId, this.daySystem, this.resourceSystem)) {
+                    this.selectBuildItem(itemId);
+                }
+                return;
+            }
+        }
+        
+        // Arrow key navigation (only in menu mode, not placement)
+        let menuIndex = this.uiManager.selectedBuildItemIndex;
+        if (menuIndex < 0) {
+            menuIndex = 0;
+            this.uiManager.selectBuildMenuItem(0);
+        }
+        
+        if (this.inputManager.isKeyPressed('ArrowUp')) {
+            const newIndex = Math.max(0, menuIndex - 1);
+            this.uiManager.selectBuildMenuItem(newIndex);
+        } else if (this.inputManager.isKeyPressed('ArrowDown')) {
+            const newIndex = Math.min(itemIds.length - 1, menuIndex + 1);
+            this.uiManager.selectBuildMenuItem(newIndex);
+        } else if (this.inputManager.isKeyPressed('Enter')) {
+            const currentIndex = this.uiManager.selectedBuildItemIndex;
+            if (currentIndex >= 0 && currentIndex < itemIds.length) {
+                const itemId = itemIds[currentIndex];
+                if (this.buildModeSystem.canAffordBuildItem(itemId, this.daySystem, this.resourceSystem)) {
+                    this.selectBuildItem(itemId);
+                }
+            }
+        }
+    }
+    
+    handlePlacementMode(deltaTime) {
+        // Update placement cursor for keyboard input
+        this.buildModeSystem.updatePlacementCursor(this.inputManager);
+        
+        // Determine placement position (mouse or keyboard)
+        let placementX, placementZ;
+        let usingKeyboard = false;
+        
+        // Check if keyboard movement keys are pressed (indicates keyboard-only mode)
+        const movementKeys = ['w', 's', 'a', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+        usingKeyboard = movementKeys.some(key => this.inputManager.isKeyPressed(key));
+        
+        if (usingKeyboard) {
+            this.usingKeyboardPlacement = true;
+        }
+        
+        if (this.usingKeyboardPlacement || usingKeyboard) {
+            // Use placement cursor position
+            const cursorPos = this.buildModeSystem.getPlacementCursorPosition();
+            placementX = cursorPos.x;
+            placementZ = cursorPos.z;
+            
+            // Show placement cursor
+            if (!this.placementCursor) {
+                this.placementCursor = new PlacementCursor();
+                this.sceneManager.add(this.placementCursor.getMesh());
+            }
+            this.placementCursor.setPosition(placementX, placementZ);
+            this.placementCursor.setVisible(true);
+        } else {
+            // Use mouse position (raycast to ground)
+            const raycaster = this.sceneManager.getRaycaster();
+            const intersects = raycaster.intersectObjects([this.mapSystem.ground]);
+            
+            if (intersects.length > 0) {
+                const point = intersects[0].point;
+                placementX = point.x;
+                placementZ = point.z;
+                const pos = { x: placementX, z: placementZ };
+                this.buildModeSystem.snapToGrid(pos);
+                placementX = pos.x;
+                placementZ = pos.z;
+            } else {
+                return; // Can't place if mouse isn't over ground
+            }
+            
+            // Hide placement cursor when using mouse
+            if (this.placementCursor) {
+                this.placementCursor.setVisible(false);
+            }
+        }
+        
+        // Update ghost preview position
+        if (this.ghostPreview) {
+            this.ghostPreview.setPosition(placementX, placementZ);
+            
+            // Validate placement
+            const validation = this.buildModeSystem.validatePlacement(
+                placementX, placementZ,
+                this.daySystem, this.resourceSystem,
+                this.trees, this.buildings, this.forestTotem, this.mapSystem
+            );
+            
+            this.ghostPreview.updateValidity(validation.valid);
+        }
+        
+        // Handle placement confirmation
+        if (this.inputManager.isKeyPressed('Enter') || this.inputManager.isKeyPressed(' ') || 
+            (this.inputManager.mouse.clicked && this.inputManager.mouse.button === 0)) {
+            this.confirmPlacement(placementX, placementZ);
+        }
+        
+        // Handle placement cancellation (right click returns to menu, Esc exits completely)
+        if (this.inputManager.mouse.rightClicked) {
+            this.buildModeSystem.cancelPlacement();
+            this.cancelPlacementVisuals();
+            // Return to menu (Esc key exits completely, handled in handleBuildMode)
+            this.enterBuildMode();
+        }
+    }
+    
+    confirmPlacement(x, z) {
+        // Validate placement again (also validated in handlePlacementMode for visual feedback)
+        // This ensures resources haven't changed and placement is still valid at confirmation time
+        const validation = this.buildModeSystem.validatePlacement(
+            x, z,
+            this.daySystem, this.resourceSystem,
+            this.trees, this.buildings, this.forestTotem, this.mapSystem
+        );
+        
+        if (!validation.valid) {
+            return; // Can't place here
+        }
+        
+        const buildItem = this.buildModeSystem.getSelectedBuildItem();
+        if (!buildItem) return;
+        
+        // Deduct resources
+        this.resourceSystem.spendWood(buildItem.woodCost);
+        this.daySystem.consumeStamina(buildItem.staminaCost);
+        this.uiManager.updateStamina(this.daySystem.getStamina(), this.daySystem.getMaxStamina());
+        
+        // Create construction site
+        const constructionSite = new ConstructionSite(x, z, buildItem);
+        this.constructionSites.push(constructionSite);
+        this.sceneManager.add(constructionSite.getMesh());
+        
+        // Remove placement visuals
+        this.cancelPlacementVisuals();
+        
+        // Exit build mode after placing building
+        this.exitBuildMode();
     }
     
     updateTreeTooltips(camera) {

@@ -57,4 +57,8 @@ export class ForestTotem {
     isDestroyed() {
         return this.health <= 0;
     }
+    
+    getInfluenceRadius() {
+        return 15.0; // 15 units influence radius
+    }
 }

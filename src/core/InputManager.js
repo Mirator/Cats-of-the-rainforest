@@ -5,7 +5,10 @@ export class InputManager {
             x: 0,
             y: 0,
             down: false,
-            clicked: false
+            clicked: false,
+            rightDown: false,
+            rightClicked: false,
+            button: 0 // 0 = left, 1 = middle, 2 = right
         };
         
         this.setupEventListeners();
@@ -30,12 +33,27 @@ export class InputManager {
         });
         
         window.addEventListener('mousedown', (e) => {
-            this.mouse.down = true;
-            this.mouse.clicked = true;
+            this.mouse.button = e.button;
+            if (e.button === 0) {
+                this.mouse.down = true;
+                this.mouse.clicked = true;
+            } else if (e.button === 2) {
+                this.mouse.rightDown = true;
+                this.mouse.rightClicked = true;
+            }
         });
         
-        window.addEventListener('mouseup', () => {
-            this.mouse.down = false;
+        window.addEventListener('mouseup', (e) => {
+            if (e.button === 0) {
+                this.mouse.down = false;
+            } else if (e.button === 2) {
+                this.mouse.rightDown = false;
+            }
+        });
+        
+        // Prevent context menu on right click
+        window.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
         });
     }
     
@@ -79,7 +97,8 @@ export class InputManager {
     }
     
     update() {
-        // Reset clicked flag after one frame
+        // Reset clicked flags after one frame
         this.mouse.clicked = false;
+        this.mouse.rightClicked = false;
     }
 }
