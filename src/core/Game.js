@@ -572,6 +572,13 @@ export class Game {
         for (const cat of this.cats) {
             cat.update(deltaTime);
         }
+
+        // Update Cat Den animations (vines)
+        for (const building of this.buildings) {
+            if (building instanceof CatDen) {
+                building.update(deltaTime, this.gameTime);
+            }
+        }
         
         // Update towers
         const enemies = this.enemySystem.getEnemies();

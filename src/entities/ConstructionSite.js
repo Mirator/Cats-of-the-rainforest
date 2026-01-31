@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { VISUAL_CONFIG } from '../config/visual.js';
 
 export class ConstructionSite {
     constructor(x, z, buildItem) {
@@ -55,6 +56,9 @@ export class ConstructionSite {
             group.add(leaf);
         }
         
+        const sizeScale = this.buildItem?.size ?? 1.0;
+        group.scale.setScalar(sizeScale);
+
         group.position.copy(this.position);
         this.mesh = group;
         

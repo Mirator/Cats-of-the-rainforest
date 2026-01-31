@@ -6,6 +6,7 @@ export const VISUAL_CONFIG = {
     mouseScale: 0.5,
     treeScale: 0.5,
     totemScale: 1.0,
+    catDenScale: 1.0,
     
     // Y offsets
     defaultYOffset: 0.5,

@@ -13,9 +13,10 @@ export class GhostPreview {
     createMesh() {
         // Create a semi-transparent cube preview (50% larger to match CatDen)
         const group = new THREE.Group();
+        const buildSize = (this.buildItem?.size ?? 1.5) * 2;
         
         // Main cube (ghost version)
-        const cubeGeometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+        const cubeGeometry = new THREE.BoxGeometry(buildSize, buildSize, buildSize);
         const cubeMaterial = new THREE.MeshStandardMaterial({ 
             color: 0xffffff,
             flatShading: true,
@@ -24,11 +25,11 @@ export class GhostPreview {
             side: THREE.DoubleSide
         });
         const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-        cube.position.y = 0.75; // Center the cube on the ground (half of 1.5)
+        cube.position.y = buildSize * 0.5;
         group.add(cube);
         
         // Outline wireframe for better visibility
-        const outlineGeometry = new THREE.BoxGeometry(1.55, 1.55, 1.55);
+        const outlineGeometry = new THREE.BoxGeometry(buildSize * 1.03, buildSize * 1.03, buildSize * 1.03);
         const outlineMaterial = new THREE.MeshBasicMaterial({ 
             color: 0x00ff00,
             wireframe: true,
@@ -36,7 +37,7 @@ export class GhostPreview {
             opacity: 0.8
         });
         const outline = new THREE.Mesh(outlineGeometry, outlineMaterial);
-        outline.position.y = 0.75;
+        outline.position.y = buildSize * 0.5;
         group.add(outline);
         
         this.outlineMesh = outline;
