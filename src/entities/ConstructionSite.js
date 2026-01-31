@@ -6,7 +6,7 @@ export class ConstructionSite {
         this.buildItem = buildItem;
         this.mesh = null;
         this.progress = 0.0; // 0.0 to 1.0
-        this.duration = 2.0; // 2 seconds
+        this.duration = 1.0; // 1 second
         this.isComplete = false;
         
         this.createMesh();

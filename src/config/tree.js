@@ -1,7 +1,7 @@
 // Tree-specific configuration
 export const TREE_CONFIG = {
     // Interaction and falling
-    interactionDuration: 3.0, // 3 seconds to cut tree
+    interactionDuration: 1.5, // 1.5 seconds to cut tree
     fallDuration: 0.8, // 0.8 seconds for fall animation
     fallAngle: Math.PI / 2, // 90 degrees fall angle
     interactionRange: 2.5,

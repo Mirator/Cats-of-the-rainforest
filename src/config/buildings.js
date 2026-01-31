@@ -11,7 +11,7 @@ export const BUILDING_CONFIG = {
     catDen: {
         size: 1.5, // Collision radius
         interactionRange: 2.5,
-        interactionDuration: 3.0, // seconds to spawn cat
+        interactionDuration: 1.5, // seconds to spawn cat
         spawnCost: {
             food: 1,
             stamina: 1
