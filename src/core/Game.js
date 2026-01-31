@@ -105,6 +105,9 @@ export class Game {
             // Update visual environment based on day/night state
             this.sceneManager.updateDayNightVisuals(dayInfo.state);
             
+            // Update stamina display when day changes (stamina refreshes on new day)
+            this.uiManager.updateStamina(this.daySystem.getStamina(), this.daySystem.getMaxStamina());
+            
             // Start wave when night starts
             if (dayInfo.state === DayState.NIGHT) {
                 this.startWave();
@@ -119,6 +122,7 @@ export class Game {
         this.uiManager.updateDayInfo(1, DayState.DAY);
         this.uiManager.setEndDayEnabled(true);
         this.uiManager.updateWaveInfo(0, 0, 0); // No wave during day
+        this.uiManager.updateStamina(this.daySystem.getStamina(), this.daySystem.getMaxStamina());
     }
     
     startWave() {
@@ -209,6 +213,9 @@ export class Game {
         // Update tree progress bars
         const camera = this.sceneManager.camera;
         this.uiManager.updateTreeProgressBars(this.trees, camera);
+        
+        // Update tree tooltips
+        this.updateTreeTooltips(camera);
         
         // Update tree animations (wind and falling)
         for (const tree of this.trees) {
@@ -315,6 +322,50 @@ export class Game {
         }
     }
     
+    updateTreeTooltips(camera) {
+        if (!this.daySystem.isDay()) {
+            // Hide all tooltips at night
+            for (const tree of this.trees) {
+                this.uiManager.hideTooltip(tree);
+            }
+            return;
+        }
+        
+        const tooltipTargets = [];
+        
+        for (const tree of this.trees) {
+            // Check if tree is eligible for tooltip
+            const isEligible = !tree.isCut && 
+                              !tree.isFalling && 
+                              !tree.isInteracting &&
+                              this.player.canInteractWith(tree);
+            
+            if (isEligible) {
+                // Check if player has enough stamina
+                const hasStamina = this.daySystem.hasStamina();
+                
+                tooltipTargets.push({
+                    target: tree,
+                    config: {
+                        title: 'Cut Tree',
+                        cost: { type: 'stamina', amount: 1 },
+                        hasResources: hasStamina,
+                        worldOffset: { x: 0, y: 4.5, z: 0 }
+                    },
+                    shouldShow: true
+                });
+            } else {
+                // Hide tooltip for this tree
+                this.uiManager.hideTooltip(tree);
+            }
+        }
+        
+        // Update tooltips for eligible trees
+        for (const target of tooltipTargets) {
+            this.uiManager.showTooltip(target.target, target.config, camera);
+        }
+    }
+    
     handleTreeCutting(deltaTime) {
         if (!this.daySystem.isDay()) {
             return; // Can't cut trees at night
@@ -348,11 +399,20 @@ export class Game {
             if (spaceHeld) {
                 // Check if interaction is complete (progress reached 1.0) BEFORE starting new interaction
                 if (nearestTree.interactionProgress >= 1.0 && !nearestTree.isFalling) {
-                    // Start falling animation
-                    nearestTree.startFalling(this.player.getPosition());
+                    // Start falling animation and consume stamina
+                    if (this.daySystem.consumeStamina(1)) {
+                        nearestTree.startFalling(this.player.getPosition());
+                        // Update UI with new stamina value
+                        this.uiManager.updateStamina(this.daySystem.getStamina(), this.daySystem.getMaxStamina());
+                    } else {
+                        // No stamina - stop interaction
+                        nearestTree.stopInteraction();
+                    }
                 } else if (!nearestTree.isInteracting && nearestTree.interactionProgress < 1.0) {
-                    // Start interaction only if not already interacting AND progress hasn't reached 1.0
-                    nearestTree.startInteraction();
+                    // Start interaction only if stamina is available AND not already interacting AND progress hasn't reached 1.0
+                    if (this.daySystem.hasStamina()) {
+                        nearestTree.startInteraction();
+                    }
                 }
             } else {
                 // Space not held - stop interaction

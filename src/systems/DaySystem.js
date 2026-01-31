@@ -9,6 +9,8 @@ export class DaySystem {
         this.currentDay = 1;
         this.listeners = [];
         this.treesCutToday = 0;
+        this.maxStamina = 10;
+        this.stamina = 10;
     }
     
     getState() {
@@ -38,6 +40,7 @@ export class DaySystem {
         this.state = DayState.DAY;
         this.currentDay++;
         this.resetTreesCutToday();
+        this.refreshStamina();
         this.notifyListeners();
     }
     
@@ -64,5 +67,29 @@ export class DaySystem {
                 day: this.currentDay
             });
         });
+    }
+    
+    getStamina() {
+        return this.stamina;
+    }
+    
+    getMaxStamina() {
+        return this.maxStamina;
+    }
+    
+    hasStamina() {
+        return this.stamina > 0;
+    }
+    
+    consumeStamina(amount = 1) {
+        if (this.stamina >= amount) {
+            this.stamina -= amount;
+            return true;
+        }
+        return false;
+    }
+    
+    refreshStamina() {
+        this.stamina = this.maxStamina;
     }
 }

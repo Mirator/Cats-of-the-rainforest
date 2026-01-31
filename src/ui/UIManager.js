@@ -14,6 +14,9 @@ export class UIManager {
         // Progress bars for tree interactions
         this.treeProgressBars = new Map(); // Map<Tree, HTMLElement>
         
+        // Tooltips for interactable objects
+        this.tooltips = new Map(); // Map<Object, HTMLElement>
+        
         this.createUI();
         this.createEdgeIndicators();
     }
@@ -50,6 +53,23 @@ export class UIManager {
             <div id="wood-display" style="margin: 5px 0;">Wood: 0</div>
         `;
         this.container.appendChild(this.resourceDisplay);
+        
+        // Stamina display
+        this.staminaDisplay = document.createElement('div');
+        this.staminaDisplay.style.cssText = `
+            position: absolute;
+            top: 120px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 20px;
+            border-radius: 8px;
+            pointer-events: none;
+        `;
+        this.staminaDisplay.innerHTML = `
+            <div style="font-size: 18px; font-weight: bold; margin-bottom: 8px;">Stamina</div>
+            <div id="stamina-display" style="margin: 5px 0;">10/10</div>
+        `;
+        this.container.appendChild(this.staminaDisplay);
         
         // Day display
         this.dayDisplay = document.createElement('div');
@@ -233,6 +253,14 @@ export class UIManager {
         }
         if (woodDisplay) {
             woodDisplay.textContent = `Wood: ${wood}`;
+        }
+    }
+    
+    updateStamina(current, max) {
+        const staminaDisplay = this.staminaDisplay.querySelector('#stamina-display');
+        
+        if (staminaDisplay) {
+            staminaDisplay.textContent = `${current}/${max}`;
         }
     }
     
@@ -430,6 +458,121 @@ export class UIManager {
         for (const [tree, bar] of this.treeProgressBars.entries()) {
             if (!interactingTrees.has(tree)) {
                 this.hideTreeProgressBar(tree);
+            }
+        }
+    }
+    
+    showTooltip(target, config, camera) {
+        if (!target || !camera || !target.getPosition) return;
+        
+        // Calculate world position above target
+        const worldPosition = target.getPosition().clone();
+        const offset = config.worldOffset || { x: 0, y: 2.5, z: 0 };
+        worldPosition.x += offset.x;
+        worldPosition.y += offset.y;
+        worldPosition.z += offset.z;
+        
+        // Project to screen coordinates
+        const screenPosition = worldPosition.clone();
+        screenPosition.project(camera);
+        
+        // Convert to pixel coordinates
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const x = (screenPosition.x * 0.5 + 0.5) * width;
+        const y = (-screenPosition.y * 0.5 + 0.5) * height;
+        
+        // Check if position is on screen
+        if (screenPosition.z > 1 || x < 0 || x > width || y < 0 || y > height) {
+            this.hideTooltip(target);
+            return;
+        }
+        
+        // Get or create tooltip element
+        let tooltip = this.tooltips.get(target);
+        
+        if (!tooltip) {
+            tooltip = document.createElement('div');
+            tooltip.className = 'interaction-tooltip';
+            tooltip.style.cssText = `
+                position: fixed;
+                background: rgba(0, 0, 0, 0.85);
+                border: 2px solid rgba(255, 255, 255, 0.6);
+                border-radius: 6px;
+                padding: 8px 12px;
+                pointer-events: none;
+                z-index: 1400;
+                transform: translate(-50%, -100%);
+                white-space: nowrap;
+                font-size: 14px;
+                color: white;
+                font-family: Arial, sans-serif;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+            `;
+            
+            document.body.appendChild(tooltip);
+            this.tooltips.set(target, tooltip);
+        }
+        
+        // Update position
+        tooltip.style.left = `${x}px`;
+        tooltip.style.top = `${y}px`;
+        
+        // Build tooltip content
+        let content = config.title || '';
+        
+        if (config.cost) {
+            const costText = this.formatCost(config.cost);
+            if (costText) {
+                content += `<div style="margin-top: 4px; font-size: 12px; color: #aaa; border-top: 1px solid rgba(255, 255, 255, 0.2); padding-top: 4px;">${costText}</div>`;
+            }
+        }
+        
+        // Apply styling if player lacks resources
+        if (config.hasResources === false) {
+            tooltip.style.opacity = '0.6';
+            tooltip.style.color = '#999';
+        } else {
+            tooltip.style.opacity = '1';
+            tooltip.style.color = 'white';
+        }
+        
+        tooltip.innerHTML = content;
+    }
+    
+    formatCost(cost) {
+        if (!cost || !cost.type || cost.amount === undefined) return '';
+        
+        const costType = cost.type.charAt(0).toUpperCase() + cost.type.slice(1);
+        return `${cost.amount} ${costType}`;
+    }
+    
+    hideTooltip(target) {
+        const tooltip = this.tooltips.get(target);
+        if (tooltip) {
+            tooltip.remove();
+            this.tooltips.delete(target);
+        }
+    }
+    
+    updateTooltips(targets, camera) {
+        // Update tooltips for provided targets
+        // targets should be an array of { target, config, shouldShow } objects
+        const eligibleTargets = new Set();
+        
+        for (const targetData of targets) {
+            if (targetData && targetData.config && targetData.shouldShow) {
+                eligibleTargets.add(targetData.target);
+                this.showTooltip(targetData.target, targetData.config, camera);
+            } else if (targetData && targetData.target) {
+                this.hideTooltip(targetData.target);
+            }
+        }
+        
+        // Clean up any orphaned tooltips
+        for (const [target, tooltip] of this.tooltips.entries()) {
+            if (!eligibleTargets.has(target)) {
+                this.hideTooltip(target);
             }
         }
     }
