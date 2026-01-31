@@ -9,8 +9,8 @@ export class TutorialSystem {
         this.steps = [
             {
                 name: "Cut down trees",
-                instructions: "Hold Space near a tree to cut it down and gather resources",
-                controls: "Hold Space",
+                instructions: "Move with WASD or Arrow Keys. Hold Space near a tree to cut it down and gather resources",
+                controls: "WASD or Arrow Keys, Space",
                 completionCheck: null // Will be set by game
             },
             {
@@ -39,8 +39,8 @@ export class TutorialSystem {
             },
             {
                 name: "Survive the first night",
-                instructions: "Defend the Forest Totem! Attack enemies with Space or Left Click",
-                controls: "Space or Left Click to attack",
+                instructions: "Defend the Forest Totem! Attack enemies with F",
+                controls: "Press F to attack",
                 completionCheck: null
             }
         ];
