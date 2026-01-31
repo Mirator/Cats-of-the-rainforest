@@ -649,11 +649,7 @@ export class Game {
     }
     
     handleBuildMode(deltaTime) {
-        if (!this.buildModeSystem.isActive()) {
-            return;
-        }
-        
-        // Handle build mode toggle
+        // Handle build mode toggle (allow entering even when inactive)
         if (this.inputManager.isAnyKeyPressed(CONTROLS.toggleBuildMode)) {
             // Use a flag to prevent multiple toggles in one frame
             if (!this.buildModeTogglePressed) {
@@ -662,6 +658,10 @@ export class Game {
             }
         } else {
             this.buildModeTogglePressed = false;
+        }
+
+        if (!this.buildModeSystem.isActive()) {
+            return;
         }
         
         // Handle exit build mode
