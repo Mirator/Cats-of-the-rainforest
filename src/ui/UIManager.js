@@ -11,6 +11,9 @@ export class UIManager {
             west: null
         };
         
+        // Progress bars for tree interactions
+        this.treeProgressBars = new Map(); // Map<Tree, HTMLElement>
+        
         this.createUI();
         this.createEdgeIndicators();
     }
@@ -331,5 +334,103 @@ export class UIManager {
             <p style="font-size: 18px; color: #aaa;">Refresh the page to try again.</p>
         `;
         document.body.appendChild(gameOverScreen);
+    }
+    
+    showTreeProgressBar(tree, progress, camera) {
+        if (!tree || !camera || !tree.mesh) return;
+        
+        // Calculate world position above tree
+        const worldPosition = tree.getPosition().clone();
+        worldPosition.y += 3; // Position bar 3 units above tree base
+        
+        // Project to screen coordinates
+        const screenPosition = worldPosition.clone();
+        screenPosition.project(camera);
+        
+        // Convert to pixel coordinates
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const x = (screenPosition.x * 0.5 + 0.5) * width;
+        const y = (-screenPosition.y * 0.5 + 0.5) * height;
+        
+        // Check if position is on screen
+        if (screenPosition.z > 1 || x < 0 || x > width || y < 0 || y > height) {
+            this.hideTreeProgressBar(tree);
+            return;
+        }
+        
+        // Get or create progress bar element
+        let progressBar = this.treeProgressBars.get(tree);
+        
+        if (!progressBar) {
+            progressBar = document.createElement('div');
+            progressBar.className = 'tree-progress-bar';
+            progressBar.style.cssText = `
+                position: fixed;
+                width: 120px;
+                height: 20px;
+                background: rgba(0, 0, 0, 0.7);
+                border: 2px solid rgba(255, 255, 255, 0.8);
+                border-radius: 4px;
+                pointer-events: none;
+                z-index: 1500;
+                transform: translate(-50%, -50%);
+            `;
+            
+            // Progress fill
+            const progressFill = document.createElement('div');
+            progressFill.className = 'tree-progress-fill';
+            progressFill.style.cssText = `
+                width: 0%;
+                height: 100%;
+                background: linear-gradient(90deg, #4a7c59, #5a8c69);
+                border-radius: 2px;
+                transition: width 0.1s linear;
+            `;
+            progressBar.appendChild(progressFill);
+            
+            document.body.appendChild(progressBar);
+            this.treeProgressBars.set(tree, progressBar);
+        }
+        
+        // Update position
+        progressBar.style.left = `${x}px`;
+        progressBar.style.top = `${y}px`;
+        
+        // Update progress
+        const progressFill = progressBar.querySelector('.tree-progress-fill');
+        if (progressFill) {
+            const progressPercent = Math.min(100, Math.max(0, progress * 100));
+            progressFill.style.width = `${progressPercent}%`;
+        }
+    }
+    
+    hideTreeProgressBar(tree) {
+        const progressBar = this.treeProgressBars.get(tree);
+        if (progressBar) {
+            progressBar.remove();
+            this.treeProgressBars.delete(tree);
+        }
+    }
+    
+    updateTreeProgressBars(trees, camera) {
+        // Hide progress bars for trees that are no longer interacting
+        const interactingTrees = new Set();
+        
+        for (const tree of trees) {
+            if (tree.isInteracting && !tree.isCut && !tree.isFalling) {
+                interactingTrees.add(tree);
+                this.showTreeProgressBar(tree, tree.interactionProgress, camera);
+            } else {
+                this.hideTreeProgressBar(tree);
+            }
+        }
+        
+        // Clean up any orphaned progress bars
+        for (const [tree, bar] of this.treeProgressBars.entries()) {
+            if (!interactingTrees.has(tree)) {
+                this.hideTreeProgressBar(tree);
+            }
+        }
     }
 }

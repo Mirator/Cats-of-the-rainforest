@@ -6,6 +6,11 @@ const WIND_DIRECTION = Math.PI / 4; // 45 degrees - same for all trees
 const WIND_SPEED = 0.8; // Wind animation speed
 const TREE_SWAY_AMPLITUDE = 3 * (Math.PI / 180); // 3 degrees in radians
 
+// Interaction and falling constants
+const INTERACTION_DURATION = 3.0; // 3 seconds to cut tree
+const FALL_DURATION = 0.8; // 0.8 seconds for fall animation
+const FALL_ANGLE = Math.PI / 2; // 90 degrees fall angle
+
 // Tree color palettes
 const TRUNK_COLORS = [
     0x8b4513, // Saddle brown
@@ -40,6 +45,18 @@ export class Tree extends BaseModel {
         
         this.isCut = false;
         this.interactionRange = 2.5;
+        
+        // Interaction state
+        this.isInteracting = false;
+        this.interactionProgress = 0.0; // 0.0 to 1.0 (0 to 3 seconds)
+        
+        // Falling animation state
+        this.isFalling = false;
+        this.fallDirection = new THREE.Vector3();
+        this.fallRotation = 0.0; // Current rotation angle during fall
+        this.fallProgress = 0.0; // 0.0 to 1.0 for fall animation timing
+        this.originalRotation = new THREE.Vector3(); // Store original rotation before fall
+        this.resourcesGiven = false; // Track if resources were already given
         
         // Model parts for color application
         this.trunkMesh = null;
@@ -135,8 +152,102 @@ export class Tree extends BaseModel {
         });
     }
     
+    startInteraction() {
+        if (this.isCut || this.isFalling) return;
+        this.isInteracting = true;
+        this.interactionProgress = 0.0;
+    }
+    
+    updateInteraction(deltaTime) {
+        if (!this.isInteracting || this.isCut || this.isFalling) return;
+        
+        this.interactionProgress += deltaTime / INTERACTION_DURATION;
+        
+        if (this.interactionProgress >= 1.0) {
+            this.interactionProgress = 1.0;
+            this.isInteracting = false;
+        }
+    }
+    
+    stopInteraction() {
+        this.isInteracting = false;
+        this.interactionProgress = 0.0;
+    }
+    
+    startFalling(playerPosition) {
+        if (this.isCut || this.isFalling) {
+            return;
+        }
+        
+        this.isFalling = true;
+        this.isInteracting = false;
+        this.fallProgress = 0.0;
+        this.fallRotation = 0.0;
+        
+        // Calculate fall direction (away from player)
+        this.fallDirection.subVectors(this.position, playerPosition);
+        this.fallDirection.y = 0; // Keep it horizontal
+        this.fallDirection.normalize();
+        
+        // Store original rotation
+        if (this.mesh) {
+            this.originalRotation.set(
+                this.mesh.rotation.x,
+                this.mesh.rotation.y,
+                this.mesh.rotation.z
+            );
+        }
+    }
+    
     update(deltaTime, gameTime) {
         if (!this.modelLoaded || !this.mesh) return;
+        
+        // Handle falling animation
+        if (this.isFalling) {
+            this.fallProgress += deltaTime / FALL_DURATION;
+            
+            if (this.fallProgress >= 1.0) {
+                this.fallProgress = 1.0;
+                // Mark as cut after fall completes
+                this.isCut = true;
+                this.isFalling = false;
+                // Resources will be given in Game.update() when it detects this state
+            } else {
+                // Calculate rotation angle (0 to FALL_ANGLE)
+                this.fallRotation = this.fallProgress * FALL_ANGLE;
+                
+                // Calculate rotation axis (perpendicular to fall direction)
+                // Rotate around X and Z axes based on fall direction
+                const fallAngleX = this.fallDirection.z * this.fallRotation;
+                const fallAngleZ = -this.fallDirection.x * this.fallRotation;
+                
+                // Apply rotation (tree falls in the direction away from player)
+                this.mesh.rotation.x = this.originalRotation.x + fallAngleX;
+                this.mesh.rotation.z = this.originalRotation.z + fallAngleZ;
+                
+                // Fade out during fall
+                const opacity = 1.0 - this.fallProgress;
+                this.mesh.traverse((child) => {
+                    if (child.isMesh && child.material) {
+                        const materials = Array.isArray(child.material) ? child.material : [child.material];
+                        materials.forEach((material) => {
+                            if (material) {
+                                if (material.transparent === undefined) {
+                                    material.transparent = true;
+                                }
+                                if (material.opacity !== undefined) {
+                                    material.opacity = opacity;
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+            return; // Don't update wind sway while falling
+        }
+        
+        // Only update wind sway if not cut and not falling
+        if (this.isCut) return;
         
         // Use game time for synchronized wind (all trees sway in same direction)
         const windTime = gameTime * WIND_SPEED;

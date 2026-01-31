@@ -43,6 +43,11 @@ export class InputManager {
         return this.keys[key.toLowerCase()] || this.keys[key] || false;
     }
     
+    isKeyHeld(key) {
+        // Check if key is currently held down (continuous press)
+        return this.keys[key.toLowerCase()] || this.keys[key] || false;
+    }
+    
     getMovementVector() {
         const move = { x: 0, z: 0 };
         

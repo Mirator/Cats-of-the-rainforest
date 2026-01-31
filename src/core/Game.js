@@ -203,15 +203,32 @@ export class Game {
         // Update camera to follow player (pass mapSystem for boundary slowdown)
         this.sceneManager.updateCamera(this.player.getPosition(), this.mapSystem);
         
-        // Handle tree cutting
-        if (this.inputManager.isActionPressed()) {
-            this.handleTreeCutting();
-        }
+        // Handle tree cutting (continuous hold interaction)
+        this.handleTreeCutting(deltaTime);
         
-        // Update tree animations (wind)
+        // Update tree progress bars
+        const camera = this.sceneManager.camera;
+        this.uiManager.updateTreeProgressBars(this.trees, camera);
+        
+        // Update tree animations (wind and falling)
         for (const tree of this.trees) {
-            if (!tree.isCut) {
-                tree.update(deltaTime, this.gameTime);
+            // Update interaction progress for interacting trees
+            if (tree.isInteracting) {
+                tree.updateInteraction(deltaTime);
+            }
+            
+            // Update tree animations (wind sway or falling)
+            tree.update(deltaTime, this.gameTime);
+            
+            // Check if tree just finished falling and should give resources
+            if (tree.isCut && !tree.isFalling && !tree.resourcesGiven && tree.interactionProgress >= 1.0) {
+                // Tree has finished falling, give resources
+                this.resourceSystem.addWood(1);
+                this.resourceSystem.addFood(1);
+                // Track tree cut for miceAlert calculation
+                this.daySystem.incrementTreesCut();
+                // Mark resources as given to prevent duplicate rewards
+                tree.resourcesGiven = true;
             }
         }
         
@@ -219,6 +236,8 @@ export class Game {
         const treesBefore = this.trees.length;
         this.trees = this.trees.filter(tree => {
             if (tree.isCut) {
+                // Clean up progress bar before removing tree
+                this.uiManager.hideTreeProgressBar(tree);
                 tree.remove();
                 this.sceneManager.remove(tree.getMesh());
                 return false;
@@ -296,17 +315,20 @@ export class Game {
         }
     }
     
-    handleTreeCutting() {
+    handleTreeCutting(deltaTime) {
         if (!this.daySystem.isDay()) {
             return; // Can't cut trees at night
         }
+        
+        // Check if space is being held
+        const spaceHeld = this.inputManager.isKeyHeld(' ');
         
         // Find nearest tree within range
         let nearestTree = null;
         let nearestDistance = Infinity;
         
         for (const tree of this.trees) {
-            if (!tree.isCut && this.player.canInteractWith(tree)) {
+            if (!tree.isCut && !tree.isFalling && this.player.canInteractWith(tree)) {
                 const distance = this.player.getPosition().distanceTo(tree.getPosition());
                 if (distance < nearestDistance) {
                     nearestDistance = distance;
@@ -315,12 +337,35 @@ export class Game {
             }
         }
         
+        // Stop interactions for trees that are no longer in range
+        for (const tree of this.trees) {
+            if (tree.isInteracting && tree !== nearestTree) {
+                tree.stopInteraction();
+            }
+        }
+        
         if (nearestTree) {
-            if (nearestTree.cut()) {
-                // Add wood resource
-                this.resourceSystem.addWood(1);
-                // Track tree cut for miceAlert calculation
-                this.daySystem.incrementTreesCut();
+            if (spaceHeld) {
+                // Check if interaction is complete (progress reached 1.0) BEFORE starting new interaction
+                if (nearestTree.interactionProgress >= 1.0 && !nearestTree.isFalling) {
+                    // Start falling animation
+                    nearestTree.startFalling(this.player.getPosition());
+                } else if (!nearestTree.isInteracting && nearestTree.interactionProgress < 1.0) {
+                    // Start interaction only if not already interacting AND progress hasn't reached 1.0
+                    nearestTree.startInteraction();
+                }
+            } else {
+                // Space not held - stop interaction
+                if (nearestTree.isInteracting) {
+                    nearestTree.stopInteraction();
+                }
+            }
+        } else {
+            // No tree in range - stop all interactions
+            for (const tree of this.trees) {
+                if (tree.isInteracting) {
+                    tree.stopInteraction();
+                }
             }
         }
     }
