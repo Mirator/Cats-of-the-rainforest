@@ -9,6 +9,11 @@ export class SceneManager {
         this.renderer = null;
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
+        this.handleResize = () => this.onWindowResize();
+        this.handleMouseMove = (e) => {
+            this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            this.mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        };
         
         // Day/night transition state
         this.currentVisualState = 'day'; // 'day', 'night', or 'transitioning'
@@ -74,13 +79,15 @@ export class SceneManager {
         this.scene.background = new THREE.Color(VISUAL_CONFIG.dayBackground);
         
         // Handle window resize
-        window.addEventListener('resize', () => this.onWindowResize());
+        window.addEventListener('resize', this.handleResize);
         
         // Update mouse position for raycaster
-        window.addEventListener('mousemove', (e) => {
-            this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-            this.mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-        });
+        window.addEventListener('mousemove', this.handleMouseMove);
+    }
+
+    destroy() {
+        window.removeEventListener('resize', this.handleResize);
+        window.removeEventListener('mousemove', this.handleMouseMove);
     }
     
     onWindowResize() {

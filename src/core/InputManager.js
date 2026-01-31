@@ -12,29 +12,23 @@ export class InputManager {
             rightClicked: false,
             button: 0 // 0 = left, 1 = middle, 2 = right
         };
-        
-        this.setupEventListeners();
-    }
-    
-    setupEventListeners() {
-        // Keyboard events
-        window.addEventListener('keydown', (e) => {
+
+        this.handleKeyDown = (e) => {
             this.keys[e.key.toLowerCase()] = true;
             this.keys[e.code] = true;
-        });
-        
-        window.addEventListener('keyup', (e) => {
+        };
+
+        this.handleKeyUp = (e) => {
             this.keys[e.key.toLowerCase()] = false;
             this.keys[e.code] = false;
-        });
-        
-        // Mouse events
-        window.addEventListener('mousemove', (e) => {
+        };
+
+        this.handleMouseMove = (e) => {
             this.mouse.x = e.clientX;
             this.mouse.y = e.clientY;
-        });
-        
-        window.addEventListener('mousedown', (e) => {
+        };
+
+        this.handleMouseDown = (e) => {
             this.mouse.button = e.button;
             if (e.button === 0) {
                 this.mouse.down = true;
@@ -43,20 +37,44 @@ export class InputManager {
                 this.mouse.rightDown = true;
                 this.mouse.rightClicked = true;
             }
-        });
-        
-        window.addEventListener('mouseup', (e) => {
+        };
+
+        this.handleMouseUp = (e) => {
             if (e.button === 0) {
                 this.mouse.down = false;
             } else if (e.button === 2) {
                 this.mouse.rightDown = false;
             }
-        });
+        };
+
+        this.handleContextMenu = (e) => {
+            e.preventDefault();
+        };
+        
+        this.setupEventListeners();
+    }
+    
+    setupEventListeners() {
+        // Keyboard events
+        window.addEventListener('keydown', this.handleKeyDown);
+        window.addEventListener('keyup', this.handleKeyUp);
+        
+        // Mouse events
+        window.addEventListener('mousemove', this.handleMouseMove);
+        window.addEventListener('mousedown', this.handleMouseDown);
+        window.addEventListener('mouseup', this.handleMouseUp);
         
         // Prevent context menu on right click
-        window.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-        });
+        window.addEventListener('contextmenu', this.handleContextMenu);
+    }
+
+    destroy() {
+        window.removeEventListener('keydown', this.handleKeyDown);
+        window.removeEventListener('keyup', this.handleKeyUp);
+        window.removeEventListener('mousemove', this.handleMouseMove);
+        window.removeEventListener('mousedown', this.handleMouseDown);
+        window.removeEventListener('mouseup', this.handleMouseUp);
+        window.removeEventListener('contextmenu', this.handleContextMenu);
     }
     
     isKeyPressed(key) {
