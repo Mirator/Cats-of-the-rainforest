@@ -1588,10 +1588,17 @@ export class Game {
     }
     
     restartGame() {
+        this.stop();
         window.location.reload();
     }
     
     stop() {
         this.isRunning = false;
+        if (this.inputManager) {
+            this.inputManager.destroy();
+        }
+        if (this.sceneManager) {
+            this.sceneManager.destroy();
+        }
     }
 }
