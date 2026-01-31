@@ -3,6 +3,7 @@ import { BaseModel } from './BaseModel.js';
 import { CAT_CONFIG } from '../config/cat.js';
 import { VISUAL_CONFIG } from '../config/visual.js';
 import { ANIMATION_CONFIG } from '../config/animation.js';
+import { COMBAT_CONFIG } from '../config/combat.js';
 
 export class Cat extends BaseModel {
     constructor(x, z, playerMaskColor = null) {
@@ -14,11 +15,14 @@ export class Cat extends BaseModel {
         });
         
         this.speed = CAT_CONFIG.speed;
+        this.collisionRadius = CAT_CONFIG.collisionRadius;
         this.state = 'idle'; // 'available' | 'assigned' | 'idle'
         this.assignedTower = null;
         this.idlePosition = null;
         this.targetPosition = null;
         this.reachedTarget = false;
+        this.lastDayState = null;
+        this.wanderTimer = 0;
         
         // Animation properties (similar to PlayerModel)
         this.animationTime = 0;
@@ -277,13 +281,177 @@ export class Cat extends BaseModel {
     }
     
     isAvailable() {
-        return this.state === 'available' || (this.state === 'idle' && this.reachedTarget);
+        return this.state !== 'assigned';
     }
-    
-    update(deltaTime) {
+
+    getNextWanderInterval() {
+        const { min, max } = CAT_CONFIG.wanderInterval;
+        return min + Math.random() * (max - min);
+    }
+
+    setTargetPosition(position) {
+        if (!position) return;
+        this.targetPosition = position.clone();
+        this.reachedTarget = false;
+    }
+
+    pickRandomPointInMap(mapSystem) {
+        const boundary = mapSystem ? mapSystem.getBoundary() : 45;
+        const x = (Math.random() * 2 - 1) * boundary;
+        const z = (Math.random() * 2 - 1) * boundary;
+        return new THREE.Vector3(x, 0, z);
+    }
+
+    pickPointAroundTotem(totemPos, radiusRange) {
+        if (!totemPos) return null;
+        const radius = radiusRange.min + Math.random() * (radiusRange.max - radiusRange.min);
+        const angle = Math.random() * Math.PI * 2;
+        const x = totemPos.x + Math.cos(angle) * radius;
+        const z = totemPos.z + Math.sin(angle) * radius;
+        return new THREE.Vector3(x, 0, z);
+    }
+
+    chooseDayTarget(totemPos, mapSystem) {
+        const useTotemBias = totemPos && Math.random() < CAT_CONFIG.dayTotemBiasChance;
+        if (useTotemBias) {
+            const target = this.pickPointAroundTotem(totemPos, CAT_CONFIG.dayTotemBiasRadius);
+            if (target) return target;
+        }
+        return this.pickRandomPointInMap(mapSystem);
+    }
+
+    chooseNightTarget(totemPos) {
+        return this.pickPointAroundTotem(totemPos, CAT_CONFIG.nightTotemRadius);
+    }
+
+    getCollisionObstacles({ trees = [], buildings = [], totem = null } = {}) {
+        const obstacles = [];
+
+        for (const tree of trees) {
+            if (!tree || tree.isCut) continue;
+            const pos = tree.getPosition ? tree.getPosition() : tree.position;
+            if (!pos) continue;
+            obstacles.push({
+                x: pos.x,
+                z: pos.z,
+                radius: COMBAT_CONFIG.treeCollisionRadius
+            });
+        }
+
+        for (const building of buildings) {
+            if (!building) continue;
+            if (typeof building.getIsBuilt === 'function' && !building.getIsBuilt()) continue;
+            const pos = building.getPosition ? building.getPosition() : building.position;
+            if (!pos) continue;
+            const radius = typeof building.getSize === 'function' ? building.getSize() : building.size;
+            if (!radius) continue;
+            obstacles.push({ x: pos.x, z: pos.z, radius });
+        }
+
+        if (totem) {
+            const pos = totem.getPosition ? totem.getPosition() : totem.position;
+            if (pos) {
+                obstacles.push({
+                    x: pos.x,
+                    z: pos.z,
+                    radius: COMBAT_CONFIG.totemCollisionRadius
+                });
+            }
+        }
+
+        return obstacles;
+    }
+
+    resolveCollisions(position, obstacles, mapSystem) {
+        let resolved = position.clone();
+        const minDistance = 0.0001;
+
+        for (let iteration = 0; iteration < 3; iteration++) {
+            let moved = false;
+
+            for (const obstacle of obstacles) {
+                const dx = resolved.x - obstacle.x;
+                const dz = resolved.z - obstacle.z;
+                const distance = Math.hypot(dx, dz);
+                const targetDistance = this.collisionRadius + obstacle.radius;
+
+                if (distance < targetDistance) {
+                    if (distance > minDistance) {
+                        const push = targetDistance - distance;
+                        resolved.x += (dx / distance) * push;
+                        resolved.z += (dz / distance) * push;
+                    } else {
+                        resolved.x += targetDistance;
+                    }
+                    moved = true;
+                }
+            }
+
+            const clamped = mapSystem ? mapSystem.clampPosition(resolved.x, resolved.z) : null;
+            if (clamped && (clamped.x !== resolved.x || clamped.z !== resolved.z)) {
+                resolved.x = clamped.x;
+                resolved.z = clamped.z;
+                moved = true;
+            }
+
+            if (!moved) break;
+        }
+
+        return resolved;
+    }
+
+    update(deltaTime, {
+        daySystem = null,
+        totem = null,
+        mapSystem = null,
+        trees = [],
+        buildings = []
+    } = {}) {
         if (!this.mesh) return;
         
         let isMoving = false;
+        const totemPos = totem ? (totem.getPosition ? totem.getPosition() : totem.position) : null;
+
+        if (this.state === 'assigned' && this.assignedTower) {
+            const towerPos = this.assignedTower.getPosition();
+            if (!this.targetPosition || this.targetPosition.distanceTo(towerPos) > 0.2) {
+                this.setTargetPosition(towerPos);
+            }
+        } else if (daySystem) {
+            const currentState = daySystem.getState ? daySystem.getState() : daySystem.state;
+            if (currentState !== this.lastDayState) {
+                this.lastDayState = currentState;
+                this.wanderTimer = 0;
+                if (currentState === 'night') {
+                    const nightTarget = this.chooseNightTarget(totemPos);
+                    if (nightTarget) {
+                        this.setTargetPosition(nightTarget);
+                    }
+                }
+            }
+
+            if (currentState === 'night') {
+                if (totemPos) {
+                    const distanceToTotem = this.position.distanceTo(totemPos);
+                    const maxDistance = CAT_CONFIG.nightTotemRadius.max * 1.2;
+                    if (!this.targetPosition || this.reachedTarget || distanceToTotem > maxDistance) {
+                        const nightTarget = this.chooseNightTarget(totemPos);
+                        if (nightTarget) {
+                            this.setTargetPosition(nightTarget);
+                        }
+                    }
+                }
+            } else {
+                this.wanderTimer -= deltaTime;
+                if (!this.targetPosition || this.reachedTarget || this.wanderTimer <= 0) {
+                    const dayTarget = this.chooseDayTarget(totemPos, mapSystem);
+                    if (dayTarget) {
+                        this.setTargetPosition(dayTarget);
+                        this.wanderTimer = this.getNextWanderInterval();
+                    }
+                }
+            }
+        }
         
         // Move toward target position
         if (this.targetPosition && !this.reachedTarget) {
@@ -296,9 +464,18 @@ export class Cat extends BaseModel {
                 const direction = new THREE.Vector2(dx / distance, dz / distance);
                 const moveSpeed = this.speed * deltaTime;
                 const moveDistance = Math.min(moveSpeed, distance);
+                const newX = this.position.x + direction.x * moveDistance;
+                const newZ = this.position.z + direction.y * moveDistance;
+                const clamped = mapSystem ? mapSystem.clampPosition(newX, newZ) : { x: newX, z: newZ };
+                const obstacles = this.getCollisionObstacles({ trees, buildings, totem });
+                const resolved = this.resolveCollisions(
+                    new THREE.Vector3(clamped.x, 0, clamped.z),
+                    obstacles,
+                    mapSystem
+                );
                 
-                this.position.x += direction.x * moveDistance;
-                this.position.z += direction.y * moveDistance;
+                this.position.x = resolved.x;
+                this.position.z = resolved.z;
                 
                 // Update rotation to face movement direction
                 const angle = Math.atan2(direction.x, direction.y) + Math.PI;

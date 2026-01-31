@@ -61,6 +61,8 @@ export class Game {
         // Totem interaction (hold to start night)
         this.isTotemInteracting = false;
         this.totemInteractionProgress = 0.0;
+        this.towerInteractionHoldLock = false;
+        this.catDenInteractionHoldLock = false;
         
         // Build mode entities
         this.ghostPreview = null;
@@ -583,7 +585,13 @@ export class Game {
         
         // Update cats
         for (const cat of this.cats) {
-            cat.update(deltaTime);
+            cat.update(deltaTime, {
+                daySystem: this.daySystem,
+                totem: this.forestTotem,
+                mapSystem: this.mapSystem,
+                trees: this.trees,
+                buildings: this.buildings
+            });
         }
 
         // Update Cat Den animations (vines)
@@ -1091,6 +1099,9 @@ export class Game {
         
         // Check if space is being held (same as tree cutting)
         const spaceHeld = this.inputManager.isKeyHeld(' ');
+        if (!spaceHeld) {
+            this.catDenInteractionHoldLock = false;
+        }
         
         // Find nearest Cat Den within range
         let nearestCatDen = null;
@@ -1116,7 +1127,7 @@ export class Game {
         }
         
         if (nearestCatDen) {
-            if (spaceHeld) {
+            if (spaceHeld && !this.catDenInteractionHoldLock) {
                 // Check if interaction is complete (progress reached 1.0) BEFORE starting new interaction
                 if (nearestCatDen.interactionProgress >= 1.0) {
                     // Spawn cat and consume resources
@@ -1131,6 +1142,7 @@ export class Game {
                         
                         // Spawn cat
                         this.spawnCatFromDen(nearestCatDen);
+                        this.catDenInteractionHoldLock = true;
                         
                         // Reset interaction progress
                         nearestCatDen.stopInteraction();
@@ -1292,6 +1304,9 @@ export class Game {
         }
 
         const spaceHeld = this.inputManager.isAnyKeyHeld(CONTROLS.interact);
+        if (!spaceHeld) {
+            this.towerInteractionHoldLock = false;
+        }
 
         // Find nearest Tower within range
         let nearestTower = null;
@@ -1319,10 +1334,11 @@ export class Game {
             const hasAvailableCat = this.cats.some(cat => cat.isAvailable());
             const canInteractAction = hasAssignedCat || hasAvailableCat;
 
-            if (spaceHeld) {
+            if (spaceHeld && !this.towerInteractionHoldLock) {
                 if (nearestTower.interactionProgress >= 1.0) {
                     if (canInteractAction) {
                         this.assignCatToTower(nearestTower);
+                        this.towerInteractionHoldLock = true;
                     }
                     nearestTower.stopInteraction();
                 } else if (!nearestTower.isInteracting && nearestTower.interactionProgress < 1.0) {

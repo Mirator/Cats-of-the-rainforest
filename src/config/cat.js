@@ -1,6 +1,22 @@
 // Cat-specific configuration
 export const CAT_CONFIG = {
     speed: 4.0,
+    collisionRadius: 0.6,
+    
+    // Roaming behavior
+    wanderInterval: {
+        min: 2.0,
+        max: 5.0
+    },
+    dayTotemBiasChance: 0.65,
+    dayTotemBiasRadius: {
+        min: 2.5,
+        max: 8.0
+    },
+    nightTotemRadius: {
+        min: 1.5,
+        max: 4.5
+    },
     
     // Animation speeds (same as player)
     legSpeed: 1.4,
