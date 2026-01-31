@@ -177,6 +177,8 @@ export class Game {
             const tree = new Tree(x, z);
             this.trees.push(tree);
             this.sceneManager.add(tree.getMesh());
+            // Initialize model loading
+            tree.init();
         }
     }
     
@@ -204,6 +206,13 @@ export class Game {
         // Handle tree cutting
         if (this.inputManager.isActionPressed()) {
             this.handleTreeCutting();
+        }
+        
+        // Update tree animations (wind)
+        for (const tree of this.trees) {
+            if (!tree.isCut) {
+                tree.update(deltaTime, this.gameTime);
+            }
         }
         
         // Remove cut trees and mark trees as changed
