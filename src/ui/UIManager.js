@@ -505,16 +505,22 @@ export class UIManager {
         }
     }
     
-    showWinScreen() {
+    showWinScreen(screenshotDataURL = null) {
+        // Remove existing win screen if present
+        const existingScreen = document.getElementById('win-screen');
+        if (existingScreen) {
+            existingScreen.remove();
+        }
+        
         const winScreen = document.createElement('div');
         winScreen.id = 'win-screen';
         winScreen.style.cssText = `
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(0, 0, 0, 0.95);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -522,13 +528,113 @@ export class UIManager {
             z-index: 2000;
             color: white;
             font-family: Arial, sans-serif;
+            overflow-y: auto;
+            padding: 20px;
         `;
-        winScreen.innerHTML = `
-            <h1 style="font-size: 48px; margin-bottom: 20px; color: #ffd700;">Victory!</h1>
-            <p style="font-size: 24px; margin-bottom: 40px;">You have protected the rainforest!</p>
-            <p style="font-size: 18px; color: #aaa;">The forest is safe from the masked mice.</p>
+        
+        let content = `
+            <h1 style="font-size: 48px; margin-bottom: 20px; color: #ffd700; text-align: center;">Victory!</h1>
+            <p style="font-size: 24px; margin-bottom: 40px; text-align: center;">You have protected the rainforest!</p>
         `;
+        
+        // Add screenshot if provided
+        if (screenshotDataURL) {
+            content += `
+                <div style="margin: 20px 0; max-width: 90%; max-height: 60vh; border: 3px solid #ffd700; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3);">
+                    <img src="${screenshotDataURL}" style="width: 100%; height: auto; display: block;" alt="Final Map Screenshot" />
+                </div>
+                <p style="font-size: 14px; color: #aaa; text-align: center; margin-top: 10px; margin-bottom: 20px;">Your final rainforest masterpiece</p>
+            `;
+            
+            // Add download button
+            const downloadButton = document.createElement('button');
+            downloadButton.textContent = 'Download Screenshot';
+            downloadButton.style.cssText = `
+                padding: 12px 30px;
+                font-size: 16px;
+                font-weight: bold;
+                background: #4a7c59;
+                color: white;
+                border: 2px solid #228b22;
+                border-radius: 8px;
+                cursor: pointer;
+                margin: 10px;
+                transition: all 0.2s;
+            `;
+            downloadButton.addEventListener('mouseenter', () => {
+                downloadButton.style.background = '#5a8c69';
+                downloadButton.style.transform = 'scale(1.05)';
+            });
+            downloadButton.addEventListener('mouseleave', () => {
+                downloadButton.style.background = '#4a7c59';
+                downloadButton.style.transform = 'scale(1)';
+            });
+            downloadButton.addEventListener('click', () => {
+                const link = document.createElement('a');
+                link.download = `rainforest-victory-${Date.now()}.png`;
+                link.href = screenshotDataURL;
+                link.click();
+            });
+            
+            winScreen.appendChild(document.createElement('div'));
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+            winScreen.appendChild(tempDiv);
+            winScreen.appendChild(downloadButton);
+        } else {
+            content += `<p style="font-size: 18px; color: #aaa; text-align: center;">The forest is safe from the masked mice.</p>`;
+            winScreen.innerHTML = content;
+        }
+        
         document.body.appendChild(winScreen);
+    }
+    
+    hideAllUI() {
+        // Hide main UI container
+        if (this.container) {
+            this.container.style.display = 'none';
+        }
+        
+        // Hide build mode overlay
+        if (this.buildModeOverlay) {
+            this.buildModeOverlay.style.display = 'none';
+        }
+        
+        // Hide build mode indicator
+        if (this.buildModeIndicator) {
+            this.buildModeIndicator.style.display = 'none';
+        }
+        
+        // Hide build instructions
+        if (this.buildInstructions) {
+            this.buildInstructions.style.display = 'none';
+        }
+        
+        // Hide all tooltips
+        for (const tooltip of this.tooltips.values()) {
+            if (tooltip) {
+                tooltip.style.display = 'none';
+            }
+        }
+        
+        // Hide all progress bars
+        for (const progressBar of this.treeProgressBars.values()) {
+            if (progressBar) {
+                progressBar.style.display = 'none';
+            }
+        }
+        for (const progressBar of this.catDenProgressBars.values()) {
+            if (progressBar) {
+                progressBar.style.display = 'none';
+            }
+        }
+        
+        // Hide edge indicators
+        Object.values(this.edgeIndicators).forEach(indicator => {
+            if (indicator) {
+                indicator.style.display = 'none';
+            }
+        });
     }
     
     showGameOverScreen() {

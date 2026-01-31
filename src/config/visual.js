@@ -36,5 +36,33 @@ export const VISUAL_CONFIG = {
     dayAmbientIntensity: 0.6,
     dayDirectionalIntensity: 0.8,
     nightAmbientIntensity: 0.2,
-    nightDirectionalIntensity: 0.3
+    nightDirectionalIntensity: 0.3,
+    
+    // Day/Night transitions
+    transitionDuration: 2.0, // seconds for smooth day/night transitions
+    
+    // Screenshot system
+    screenshot: {
+        cameraTransitionDuration: 2.0, // seconds to transition camera to map view
+        captureDelay: 0.5 // seconds to wait after camera transition before capture
+    },
+    
+    // Visual feedback effects
+    effects: {
+        treeCutDuration: 1.0, // seconds
+        treeCutParticleCount: 8,
+        treeCutColor: 0x228b22, // Green particles
+        
+        catSpawnDuration: 1.5, // seconds
+        catSpawnParticleCount: 12,
+        catSpawnColor: 0xff8c42, // Orange particles
+        
+        buildingCompleteDuration: 1.5, // seconds
+        buildingCompleteParticleCount: 15,
+        buildingCompleteColor: 0xffd700, // Gold particles
+        
+        enemyDeathDuration: 0.8, // seconds
+        enemyDeathParticleCount: 10,
+        enemyDeathColor: 0x8b7355 // Brown particles
+    }
 };

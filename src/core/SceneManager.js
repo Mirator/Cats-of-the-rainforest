@@ -10,6 +10,24 @@ export class SceneManager {
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
         
+        // Day/night transition state
+        this.currentVisualState = 'day'; // 'day', 'night', or 'transitioning'
+        this.targetVisualState = 'day';
+        this.transitionProgress = 0; // 0 to 1
+        this.transitionStartTime = 0;
+        this.isTransitioning = false;
+        
+        // Current visual values (for smooth transitions)
+        this.currentAmbientIntensity = VISUAL_CONFIG.dayAmbientIntensity;
+        this.currentDirectionalIntensity = VISUAL_CONFIG.dayDirectionalIntensity;
+        this.currentBackgroundColor = new THREE.Color(VISUAL_CONFIG.dayBackground);
+        this.currentFogColor = new THREE.Color(VISUAL_CONFIG.dayFogColor);
+        this.currentFogNear = VISUAL_CONFIG.dayFogNear;
+        this.currentFogFar = VISUAL_CONFIG.dayFogFar;
+        
+        // Visual effects
+        this.activeEffects = [];
+        
         this.init();
     }
     
@@ -121,6 +139,11 @@ export class SceneManager {
         this.renderer.render(this.scene, this.camera);
     }
     
+    update(deltaTime) {
+        // Update visual effects
+        this.updateEffects(deltaTime);
+    }
+    
     getRaycaster() {
         this.raycaster.setFromCamera(this.mouse, this.camera);
         return this.raycaster;
@@ -135,22 +158,324 @@ export class SceneManager {
     }
     
     updateDayNightVisuals(state) {
-        if (state === 'day') {
-            // Day settings: bright and clear (terrain-matching green)
-            this.ambientLight.intensity = VISUAL_CONFIG.dayAmbientIntensity;
-            this.directionalLight.intensity = VISUAL_CONFIG.dayDirectionalIntensity;
-            this.scene.background = new THREE.Color(VISUAL_CONFIG.dayBackground);
-            this.scene.fog.color.setHex(VISUAL_CONFIG.dayFogColor);
-            this.scene.fog.near = VISUAL_CONFIG.dayFogNear;
-            this.scene.fog.far = VISUAL_CONFIG.dayFogFar;
-        } else if (state === 'night') {
-            // Night settings: dark and atmospheric (dark forest green, no blue - minimum 0x20 per channel)
-            this.ambientLight.intensity = VISUAL_CONFIG.nightAmbientIntensity;
-            this.directionalLight.intensity = VISUAL_CONFIG.nightDirectionalIntensity;
-            this.scene.background = new THREE.Color(VISUAL_CONFIG.nightBackground);
-            this.scene.fog.color.setHex(VISUAL_CONFIG.nightFogColor);
-            this.scene.fog.near = VISUAL_CONFIG.nightFogNear;
-            this.scene.fog.far = VISUAL_CONFIG.nightFogFar;
+        // If already in this state, do nothing
+        if (this.currentVisualState === state && !this.isTransitioning) {
+            return;
+        }
+        
+        // Start transition
+        this.targetVisualState = state;
+        this.isTransitioning = true;
+        this.transitionProgress = 0;
+        this.transitionStartTime = performance.now();
+    }
+    
+    updateDayNightTransition(deltaTime) {
+        if (!this.isTransitioning) {
+            return;
+        }
+        
+        // Update transition progress
+        const elapsed = (performance.now() - this.transitionStartTime) / 1000; // Convert to seconds
+        const duration = VISUAL_CONFIG.transitionDuration;
+        this.transitionProgress = Math.min(elapsed / duration, 1);
+        
+        // Ease in-out for smoother transition
+        const eased = this.transitionProgress < 0.5
+            ? 2 * this.transitionProgress * this.transitionProgress
+            : 1 - Math.pow(-2 * this.transitionProgress + 2, 2) / 2;
+        
+        // Get target values
+        const targetAmbient = this.targetVisualState === 'day' 
+            ? VISUAL_CONFIG.dayAmbientIntensity 
+            : VISUAL_CONFIG.nightAmbientIntensity;
+        const targetDirectional = this.targetVisualState === 'day'
+            ? VISUAL_CONFIG.dayDirectionalIntensity
+            : VISUAL_CONFIG.nightDirectionalIntensity;
+        const targetBackground = this.targetVisualState === 'day'
+            ? VISUAL_CONFIG.dayBackground
+            : VISUAL_CONFIG.nightBackground;
+        const targetFogColor = this.targetVisualState === 'day'
+            ? VISUAL_CONFIG.dayFogColor
+            : VISUAL_CONFIG.nightFogColor;
+        const targetFogNear = this.targetVisualState === 'day'
+            ? VISUAL_CONFIG.dayFogNear
+            : VISUAL_CONFIG.nightFogNear;
+        const targetFogFar = this.targetVisualState === 'day'
+            ? VISUAL_CONFIG.dayFogFar
+            : VISUAL_CONFIG.nightFogFar;
+        
+        // Interpolate values
+        this.currentAmbientIntensity = THREE.MathUtils.lerp(
+            this.currentAmbientIntensity,
+            targetAmbient,
+            eased
+        );
+        this.currentDirectionalIntensity = THREE.MathUtils.lerp(
+            this.currentDirectionalIntensity,
+            targetDirectional,
+            eased
+        );
+        
+        // Interpolate colors
+        const targetBgColor = new THREE.Color(targetBackground);
+        this.currentBackgroundColor.lerp(targetBgColor, eased);
+        
+        const targetFogCol = new THREE.Color(targetFogColor);
+        this.currentFogColor.lerp(targetFogCol, eased);
+        
+        // Interpolate fog distances
+        this.currentFogNear = THREE.MathUtils.lerp(
+            this.currentFogNear,
+            targetFogNear,
+            eased
+        );
+        this.currentFogFar = THREE.MathUtils.lerp(
+            this.currentFogFar,
+            targetFogFar,
+            eased
+        );
+        
+        // Apply interpolated values
+        this.ambientLight.intensity = this.currentAmbientIntensity;
+        this.directionalLight.intensity = this.currentDirectionalIntensity;
+        this.scene.background = this.currentBackgroundColor.clone();
+        this.scene.fog.color.copy(this.currentFogColor);
+        this.scene.fog.near = this.currentFogNear;
+        this.scene.fog.far = this.currentFogFar;
+        
+        // Check if transition is complete
+        if (this.transitionProgress >= 1) {
+            this.isTransitioning = false;
+            this.currentVisualState = this.targetVisualState;
+            
+            // Ensure final values are exact
+            this.ambientLight.intensity = targetAmbient;
+            this.directionalLight.intensity = targetDirectional;
+            this.scene.background = new THREE.Color(targetBackground);
+            this.scene.fog.color.setHex(targetFogColor);
+            this.scene.fog.near = targetFogNear;
+            this.scene.fog.far = targetFogFar;
+            
+            // Update current values to match
+            this.currentAmbientIntensity = targetAmbient;
+            this.currentDirectionalIntensity = targetDirectional;
+            this.currentBackgroundColor.setHex(targetBackground);
+            this.currentFogColor.setHex(targetFogColor);
+            this.currentFogNear = targetFogNear;
+            this.currentFogFar = targetFogFar;
+        }
+    }
+    
+    /**
+     * Frame the entire map for screenshot capture
+     * @param {MapSystem} mapSystem - The map system to get boundary from
+     * @param {Function} onComplete - Callback when camera transition is complete
+     */
+    frameMapForScreenshot(mapSystem, onComplete) {
+        if (!mapSystem) {
+            if (onComplete) onComplete();
+            return;
+        }
+        
+        const boundary = mapSystem.getBoundary();
+        const mapSize = mapSystem.getMapSize() || boundary * 2;
+        
+        // Calculate camera position to frame entire map
+        // Use orthographic-like positioning: camera high above center, looking down
+        // Calculate distance needed to see entire map with current FOV
+        const fov = this.camera.fov * (Math.PI / 180);
+        const aspect = this.camera.aspect;
+        const mapDiagonal = Math.sqrt((boundary * 2) ** 2 + (boundary * 2) ** 2);
+        
+        // Calculate height needed to see entire map
+        // tan(fov/2) = (mapDiagonal/2) / height
+        const height = (mapDiagonal / 2) / Math.tan(fov / 2);
+        // Add some padding
+        const cameraHeight = height * 1.2;
+        
+        // Target position: center of map, high above
+        const targetPosition = new THREE.Vector3(0, cameraHeight, 0);
+        
+        // Store original camera position for potential restoration
+        this.originalCameraPosition = this.camera.position.clone();
+        this.originalCameraLookAt = new THREE.Vector3(0, 0, 0);
+        
+        // Animate camera to target position
+        const startPosition = this.camera.position.clone();
+        const startTime = performance.now();
+        const duration = VISUAL_CONFIG.screenshot.cameraTransitionDuration * 1000; // Convert to ms
+        
+        const animate = () => {
+            const currentTime = performance.now();
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Ease in-out
+            const eased = progress < 0.5
+                ? 2 * progress * progress
+                : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+            
+            // Interpolate position
+            this.camera.position.lerpVectors(startPosition, targetPosition, eased);
+            this.camera.lookAt(0, 0, 0);
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                // Camera transition complete
+                if (onComplete) {
+                    setTimeout(onComplete, VISUAL_CONFIG.screenshot.captureDelay * 1000);
+                }
+            }
+        };
+        
+        animate();
+    }
+    
+    /**
+     * Capture screenshot of current render
+     * @returns {string} Data URL of the screenshot
+     */
+    captureScreenshot() {
+        // Render one frame to ensure everything is up to date
+        this.render();
+        
+        // Capture screenshot
+        const dataURL = this.renderer.domElement.toDataURL('image/png');
+        return dataURL;
+    }
+    
+    /**
+     * Restore camera to original position (after screenshot)
+     */
+    restoreCamera() {
+        if (this.originalCameraPosition) {
+            this.camera.position.copy(this.originalCameraPosition);
+            this.originalCameraPosition = null;
+        }
+    }
+    
+    /**
+     * Create a particle effect at a position
+     * @param {THREE.Vector3} position - World position
+     * @param {string} effectType - 'treeCut', 'catSpawn', 'buildingComplete', 'enemyDeath'
+     */
+    createParticleEffect(position, effectType) {
+        const effectConfig = VISUAL_CONFIG.effects;
+        let config;
+        
+        switch (effectType) {
+            case 'treeCut':
+                config = {
+                    duration: effectConfig.treeCutDuration,
+                    particleCount: effectConfig.treeCutParticleCount,
+                    color: effectConfig.treeCutColor
+                };
+                break;
+            case 'catSpawn':
+                config = {
+                    duration: effectConfig.catSpawnDuration,
+                    particleCount: effectConfig.catSpawnParticleCount,
+                    color: effectConfig.catSpawnColor
+                };
+                break;
+            case 'buildingComplete':
+                config = {
+                    duration: effectConfig.buildingCompleteDuration,
+                    particleCount: effectConfig.buildingCompleteParticleCount,
+                    color: effectConfig.buildingCompleteColor
+                };
+                break;
+            case 'enemyDeath':
+                config = {
+                    duration: effectConfig.enemyDeathDuration,
+                    particleCount: effectConfig.enemyDeathParticleCount,
+                    color: effectConfig.enemyDeathColor
+                };
+                break;
+            default:
+                return;
+        }
+        
+        // Create particle group
+        const particles = new THREE.Group();
+        particles.position.copy(position);
+        particles.position.y += 0.5; // Slightly above ground
+        
+        // Create individual particles
+        for (let i = 0; i < config.particleCount; i++) {
+            const geometry = new THREE.SphereGeometry(0.1, 8, 8);
+            const material = new THREE.MeshBasicMaterial({ color: config.color });
+            const particle = new THREE.Mesh(geometry, material);
+            
+            // Random direction
+            const angle = (Math.PI * 2 * i) / config.particleCount + Math.random() * 0.5;
+            const speed = 0.5 + Math.random() * 0.5;
+            particle.userData = {
+                velocity: new THREE.Vector3(
+                    Math.cos(angle) * speed,
+                    1 + Math.random() * 1,
+                    Math.sin(angle) * speed
+                ),
+                startTime: performance.now()
+            };
+            
+            particles.add(particle);
+        }
+        
+        this.scene.add(particles);
+        
+        // Store effect for update
+        this.activeEffects.push({
+            group: particles,
+            duration: config.duration,
+            startTime: performance.now()
+        });
+    }
+    
+    /**
+     * Update all active visual effects
+     * @param {number} deltaTime - Time since last frame
+     */
+    updateEffects(deltaTime) {
+        const currentTime = performance.now();
+        
+        for (let i = this.activeEffects.length - 1; i >= 0; i--) {
+            const effect = this.activeEffects[i];
+            const elapsed = (currentTime - effect.startTime) / 1000;
+            const progress = elapsed / effect.duration;
+            
+            if (progress >= 1) {
+                // Effect complete - remove
+                this.scene.remove(effect.group);
+                effect.group.traverse((child) => {
+                    if (child.geometry) child.geometry.dispose();
+                    if (child.material) child.material.dispose();
+                });
+                this.activeEffects.splice(i, 1);
+                continue;
+            }
+            
+            // Update particles
+            const fadeProgress = 1 - progress;
+            effect.group.children.forEach((particle, index) => {
+                if (particle.userData.velocity) {
+                    // Move particle
+                    particle.position.add(
+                        particle.userData.velocity.clone().multiplyScalar(deltaTime)
+                    );
+                    
+                    // Apply gravity
+                    particle.userData.velocity.y -= 5 * deltaTime;
+                    
+                    // Fade out
+                    if (particle.material) {
+                        particle.material.opacity = fadeProgress;
+                        particle.material.transparent = true;
+                    }
+                }
+            });
         }
     }
 }

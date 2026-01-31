@@ -387,6 +387,12 @@ export class Game {
         // Update game time
         this.gameTime += deltaTime;
         
+        // Update day/night visual transitions
+        this.sceneManager.updateDayNightTransition(deltaTime);
+        
+        // Update visual effects
+        this.sceneManager.update(deltaTime);
+        
         // Update input
         this.inputManager.update();
         
@@ -467,6 +473,8 @@ export class Game {
                 this.daySystem.incrementTreesCut();
                 // Mark resources as given to prevent duplicate rewards
                 tree.resourcesGiven = true;
+                // Visual effect for tree cut
+                this.sceneManager.createParticleEffect(tree.getPosition(), 'treeCut');
             }
         }
         
@@ -575,6 +583,9 @@ export class Game {
                     this.buildings.push(building);
                     this.sceneManager.add(building.getMesh());
                     building.init();
+                    
+                    // Visual effect for building completion
+                    this.sceneManager.createParticleEffect(sitePos, 'buildingComplete');
                 }
                 
                 // Remove construction site
@@ -1005,6 +1016,9 @@ export class Game {
         this.cats.push(cat);
         this.sceneManager.add(cat.getMesh());
         cat.init();
+        
+        // Visual effect for cat spawn
+        this.sceneManager.createParticleEffect(denPos, 'catSpawn');
     }
     
     updateCatDenTooltips(camera) {
@@ -1173,9 +1187,18 @@ export class Game {
     
     handleWin() {
         this.hasWon = true;
-        this.uiManager.showWinScreen();
-        // Stop enemy spawning
-        // Hide UI and frame map (per design doc) - can be implemented later
+        
+        // Hide all UI elements
+        this.uiManager.hideAllUI();
+        
+        // Frame map and capture screenshot
+        this.sceneManager.frameMapForScreenshot(this.mapSystem, () => {
+            // Capture screenshot after camera transition
+            const screenshotDataURL = this.sceneManager.captureScreenshot();
+            
+            // Show win screen with screenshot
+            this.uiManager.showWinScreen(screenshotDataURL);
+        });
     }
     
     handleGameOver() {

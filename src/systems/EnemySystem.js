@@ -203,6 +203,13 @@ export class EnemySystem {
         for (let i = destroyedIndices.length - 1; i >= 0; i--) {
             const index = destroyedIndices[i];
             const mouse = this.enemies[index];
+            const mousePosition = mouse.getPosition ? mouse.getPosition() : mouse.position;
+            
+            // Create death effect before destroying
+            if (this.sceneManager && mousePosition) {
+                this.sceneManager.createParticleEffect(mousePosition, 'enemyDeath');
+            }
+            
             mouse.destroy();
             this.enemies.splice(index, 1);
             // Notify wave system that enemy was killed
