@@ -1,35 +1,25 @@
-# Cats-of-the-rainforest
-Game made for Global Game Jam 2026
+# Cats of the Rainforest
 
-## Milestone 1: Core Loop & World Setup
+A strategy and tower-defense game where a cat tribe protects a rainforest clearing from masked mice. Gather resources during the day and defend the forest at night across 5 waves. Made for Global Game Jam 2026.
 
-A playable prototype with day/night cycle and visible forest clearing.
+## Setup
 
-### Setup
-
-1. Install dependencies:
 ```bash
 npm install
-```
-
-2. Start development server:
-```bash
 npm run dev
 ```
 
-3. Open your browser to the URL shown (typically http://localhost:3000)
+Open your browser to the URL shown (typically `http://localhost:3000`)
 
-### Controls
+## Controls
 
-- **WASD** or **Arrow Keys**: Move player
-- **Spacebar** or **Mouse Click**: Cut nearby tree (when in range)
-- **End Day Button**: Transition from day to night phase
+- **WASD/Arrow Keys**: Move player
+- **Space**: Hold to cut trees, spawn cats, or interact
+- **F**: Attack enemies (night phase)
+- **B**: Toggle build mode | **Escape**: Exit build mode
+- **Number Keys (1-9)**: Select structure | **Enter/Space**: Confirm | **Escape/Right Click**: Cancel
 
-### Features
+## Gameplay
 
-- Player movement with boundary collision
-- Tree cutting and resource gathering (wood)
-- Resource system (food and wood counters)
-- Day/night cycle system
-- Forest Totem at map center
-- UI displaying resources and day state
+**Day Phase**: Cut trees (food + wood), build Cat Dens and Towers, train cats, assign cats to towers.  
+**Night Phase**: Defend the Forest Totem from enemy waves. Survive all 5 waves to win.
