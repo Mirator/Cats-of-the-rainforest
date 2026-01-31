@@ -18,13 +18,6 @@ export const ANIMATION_CONFIG = {
         legAmplitude: 20 * (Math.PI / 180) // 20 degrees
     },
     
-    // Tree wind animation
-    tree: {
-        windDirection: Math.PI / 4, // 45 degrees - same for all trees
-        windSpeed: 0.8,
-        swayAmplitude: 3 * (Math.PI / 180) // 3 degrees in radians
-    },
-    
     // Animation damping
     dampingFactor: 0.9,
     minRotationThreshold: 0.01

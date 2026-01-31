@@ -1,7 +1,6 @@
 // Build mode configuration
 export const BUILD_CONFIG = {
     gridSize: 1.0,
-    totemInfluenceRadius: 15.0,
     
     // Buildable items configuration
     buildItems: {
