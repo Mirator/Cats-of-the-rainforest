@@ -3,8 +3,8 @@ export const CAT_CONFIG = {
     speed: 4.0,
     
     // Animation speeds (same as player)
-    legSpeed: 2.8,
-    legAmplitude: 25 * (Math.PI / 180),
+    legSpeed: 1.4,
+    legAmplitude: 12.5 * (Math.PI / 180),
     headSpeed: 1.5,
     headAmplitude: 2.5 * (Math.PI / 180),
     headBobAmplitude: 0.03,

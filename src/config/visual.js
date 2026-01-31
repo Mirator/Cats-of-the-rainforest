@@ -22,8 +22,8 @@ export const VISUAL_CONFIG = {
     totemPlaceholderColor: 0x5a4a3a,
     
     // Camera settings
-    cameraOffset: { x: 0, y: 12, z: 12 },
-    cameraSlowdownZone: 30, // Start slowing down 30 units before boundary
+    cameraOffset: { x: 0, y: 9, z: 9 },
+    cameraSlowdownZone: 22.5, // Start slowing down 22.5 units before boundary
     cameraBaseLerpSpeed: 0.1,
     
     // Scene colors
@@ -31,10 +31,10 @@ export const VISUAL_CONFIG = {
     nightBackground: 0x344437,
     dayFogColor: 0x5a7c69,
     nightFogColor: 0x344437,
-    dayFogNear: 50,
-    dayFogFar: 200,
-    nightFogNear: 30,
-    nightFogFar: 150,
+    dayFogNear: 37.5,
+    dayFogFar: 150,
+    nightFogNear: 22.5,
+    nightFogFar: 112.5,
     dayGroundColor: 0x4a7c59,
     nightGroundColor: 0x2f4338,
     dayExtendedGroundColor: 0x3a5c49,

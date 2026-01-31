@@ -1,20 +1,20 @@
 // Map and world configuration
 export const MAP_CONFIG = {
-    mapSize: 120,
+    mapSize: 90,
     get boundary() {
-        return this.mapSize / 2; // 60
+        return this.mapSize / 2; // 45
     },
     
     // Tree generation
-    treeCount: 80,
-    centerRadius: 6, // Avoid center area for totem
+    treeCount: 45,
+    centerRadius: 4.5, // Avoid center area for totem
     
     // Cat spawn position (relative to totem)
     catSpawnRadius: {
-        min: 3,
-        max: 5
+        min: 2.25,
+        max: 3.75
     },
     
     // Boundary markers
-    boundaryHeight: 2
+    boundaryHeight: 1.5
 };

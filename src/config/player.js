@@ -1,6 +1,6 @@
 // Player configuration
 export const PLAYER_CONFIG = {
-    speed: 6.5,
+    speed: 7.8,
     interactionRange: 2.5,
     yOffset: 0.5,
     
