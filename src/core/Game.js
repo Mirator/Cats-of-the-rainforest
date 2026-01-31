@@ -104,6 +104,8 @@ export class Game {
         const center = this.mapSystem.getCenter();
         this.forestTotem = new ForestTotem(center.x, center.z);
         this.sceneManager.add(this.forestTotem.getMesh());
+        this.forestTotem.init();
+        this.forestTotem.setFacingAngle(Math.PI);
         
         // Generate trees
         this.generateTrees();
@@ -490,6 +492,9 @@ export class Game {
         
         // Update visual effects
         this.sceneManager.update(deltaTime);
+
+        // Update totem animation (glow/flicker)
+        this.forestTotem.update(deltaTime);
         
         // Handle build mode
         this.handleBuildMode(deltaTime);

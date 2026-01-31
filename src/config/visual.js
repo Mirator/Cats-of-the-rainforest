@@ -5,6 +5,7 @@ export const VISUAL_CONFIG = {
     catScale: 0.5,
     mouseScale: 0.5,
     treeScale: 0.5,
+    totemScale: 1.0,
     
     // Y offsets
     defaultYOffset: 0.5,
@@ -16,6 +17,7 @@ export const VISUAL_CONFIG = {
     treePlaceholderColor: 0x228b22,
     towerPlaceholderColor: 0x6a5a4a,
     catDenPlaceholderColor: 0x8b7355,
+    totemPlaceholderColor: 0x5a4a3a,
     
     // Camera settings
     cameraOffset: { x: 0, y: 12, z: 12 },
