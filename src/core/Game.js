@@ -21,6 +21,7 @@ import { UIManager } from '../ui/UIManager.js';
 import { MAP_CONFIG } from '../config/map.js';
 import { WAVE_CONFIG } from '../config/waves.js';
 import { BUILD_CONFIG } from '../config/build.js';
+import { BUILDING_CONFIG } from '../config/buildings.js';
 import { CONTROLS } from '../config/controls.js';
 import * as THREE from 'three';
 
@@ -56,6 +57,10 @@ export class Game {
         this.cats = []; // Track all cats
         this.towers = []; // Track all towers
         this.treesChanged = false; // Track if trees changed for pathfinding update
+
+        // Totem interaction (hold to start night)
+        this.isTotemInteracting = false;
+        this.totemInteractionProgress = 0.0;
         
         // Build mode entities
         this.ghostPreview = null;
@@ -532,12 +537,27 @@ export class Game {
         
         // Update Cat Den progress bars
         this.uiManager.updateCatDenProgressBars(this.buildings, camera);
+
+        // Handle Totem interaction (hold to start night)
+        this.handleTotemInteractions(deltaTime);
+        this.uiManager.updateTotemProgressBar(
+            this.forestTotem,
+            this.totemInteractionProgress,
+            camera,
+            this.isTotemInteracting
+        );
         
         // Handle Tower interactions
         this.handleTowerInteractions(deltaTime);
+
+        // Update Tower progress bars
+        this.uiManager.updateTowerProgressBars(this.towers, camera);
         
         // Update Cat Den tooltips
         this.updateCatDenTooltips(camera);
+        
+        // Update Totem tooltip
+        this.updateTotemTooltips(camera);
         
         // Update Tower tooltips
         this.updateTowerTooltips(camera);
@@ -1124,6 +1144,43 @@ export class Game {
             }
         }
     }
+
+    handleTotemInteractions(deltaTime) {
+        if (!this.daySystem.isDay()) {
+            this.stopTotemInteraction();
+            return;
+        }
+
+        const spaceHeld = this.inputManager.isAnyKeyHeld(CONTROLS.interact);
+        const totemPos = this.forestTotem.getPosition();
+        const distance = this.player.getPosition().distanceTo(totemPos);
+        const inRange = distance <= BUILDING_CONFIG.forestTotem.interactionRange;
+
+        if (!spaceHeld || !inRange) {
+            this.stopTotemInteraction();
+            return;
+        }
+
+        if (!this.isTotemInteracting) {
+            this.isTotemInteracting = true;
+            this.totemInteractionProgress = 0.0;
+        }
+
+        this.totemInteractionProgress += deltaTime / BUILDING_CONFIG.forestTotem.interactionDuration;
+
+        if (this.totemInteractionProgress >= 1.0) {
+            this.totemInteractionProgress = 1.0;
+            this.isTotemInteracting = false;
+            this.daySystem.endDay();
+        }
+    }
+
+    stopTotemInteraction() {
+        if (this.isTotemInteracting || this.totemInteractionProgress > 0) {
+            this.isTotemInteracting = false;
+            this.totemInteractionProgress = 0.0;
+        }
+    }
     
     spawnCatFromDen(catDen) {
         // Create cat at Cat Den position with player's mask color
@@ -1200,20 +1257,21 @@ export class Game {
     
     handleTowerInteractions(deltaTime) {
         if (!this.daySystem.isDay()) {
+            // Stop interactions when night begins
+            for (const tower of this.towers) {
+                if (tower.isInteracting) {
+                    tower.stopInteraction();
+                }
+            }
             return; // Can only interact during day
         }
-        
-        // Check if space is pressed
-        const spacePressed = this.inputManager.isKeyPressed(' ');
-        
-        if (!spacePressed) {
-            return;
-        }
-        
+
+        const spaceHeld = this.inputManager.isAnyKeyHeld(CONTROLS.interact);
+
         // Find nearest Tower within range
         let nearestTower = null;
         let nearestDistance = Infinity;
-        
+
         for (const tower of this.towers) {
             if (tower.getIsBuilt() && tower.canInteract(this.player.getPosition(), this.daySystem)) {
                 const distance = this.player.getPosition().distanceTo(tower.getPosition());
@@ -1223,9 +1281,47 @@ export class Game {
                 }
             }
         }
-        
+
+        // Stop interactions for towers that are no longer in range
+        for (const tower of this.towers) {
+            if (tower.isInteracting && tower !== nearestTower) {
+                tower.stopInteraction();
+            }
+        }
+
         if (nearestTower) {
-            this.assignCatToTower(nearestTower);
+            const hasAssignedCat = nearestTower.assignedCat !== null;
+            const hasAvailableCat = this.cats.some(cat => cat.isAvailable());
+            const canInteractAction = hasAssignedCat || hasAvailableCat;
+
+            if (spaceHeld) {
+                if (nearestTower.interactionProgress >= 1.0) {
+                    if (canInteractAction) {
+                        this.assignCatToTower(nearestTower);
+                    }
+                    nearestTower.stopInteraction();
+                } else if (!nearestTower.isInteracting && nearestTower.interactionProgress < 1.0) {
+                    if (canInteractAction) {
+                        nearestTower.startInteraction();
+                    }
+                }
+            } else if (nearestTower.isInteracting) {
+                nearestTower.stopInteraction();
+            }
+        } else {
+            // No tower in range - stop all interactions
+            for (const tower of this.towers) {
+                if (tower.isInteracting) {
+                    tower.stopInteraction();
+                }
+            }
+        }
+
+        // Update interaction progress for interacting towers
+        for (const tower of this.towers) {
+            if (tower.isInteracting) {
+                tower.updateInteraction(deltaTime);
+            }
         }
     }
     
@@ -1301,6 +1397,27 @@ export class Game {
         // Update tooltips for eligible Towers
         for (const target of tooltipTargets) {
             this.uiManager.showTooltip(target.target, target.config, camera);
+        }
+    }
+
+    updateTotemTooltips(camera) {
+        if (!this.daySystem.isDay()) {
+            this.uiManager.hideTooltip(this.forestTotem);
+            return;
+        }
+
+        const totemPos = this.forestTotem.getPosition();
+        const distance = this.player.getPosition().distanceTo(totemPos);
+        const inRange = distance <= BUILDING_CONFIG.forestTotem.interactionRange;
+
+        if (inRange) {
+            this.uiManager.showTooltip(this.forestTotem, {
+                title: 'Start Night',
+                hasResources: true,
+                worldOffset: { x: 0, y: 5, z: 0 }
+            }, camera);
+        } else {
+            this.uiManager.hideTooltip(this.forestTotem);
         }
     }
     

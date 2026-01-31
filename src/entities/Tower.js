@@ -17,6 +17,11 @@ export class Tower extends BaseModel {
         // Cat assignment
         this.assignedCat = null;
         this.isActiveFlag = false;
+
+        // Interaction state (hold-to-assign)
+        this.isInteracting = false;
+        this.interactionProgress = 0.0; // 0.0 to 1.0
+        this.interactionDuration = BUILDING_CONFIG.tower.interactionDuration;
         
         // Combat properties
         this.attackRange = BUILDING_CONFIG.tower.attackRange;
@@ -79,6 +84,28 @@ export class Tower extends BaseModel {
         
         const distance = playerPosition.distanceTo(this.position);
         return distance <= BUILDING_CONFIG.tower.interactionRange;
+    }
+
+    startInteraction() {
+        if (!this.isBuilt) return;
+        this.isInteracting = true;
+        this.interactionProgress = 0.0;
+    }
+
+    updateInteraction(deltaTime) {
+        if (!this.isInteracting || !this.isBuilt) return;
+
+        this.interactionProgress += deltaTime / this.interactionDuration;
+
+        if (this.interactionProgress >= 1.0) {
+            this.interactionProgress = 1.0;
+            this.isInteracting = false;
+        }
+    }
+
+    stopInteraction() {
+        this.isInteracting = false;
+        this.interactionProgress = 0.0;
     }
     
     findTarget(enemies, totemPosition) {

@@ -5,6 +5,8 @@ export class InteractionUI {
         this.tooltips = new Map();
         this.treeProgressBars = new Map();
         this.catDenProgressBars = new Map();
+        this.towerProgressBars = new Map();
+        this.totemProgressBar = null;
         this.edgeIndicators = {
             north: null,
             south: null,
@@ -303,6 +305,169 @@ export class InteractionUI {
             }
         }
     }
+
+    showTowerProgressBar(tower, progress, camera) {
+        if (!tower || !camera || !tower.mesh) return;
+
+        const worldPosition = tower.getPosition().clone();
+        worldPosition.y += 3;
+
+        const screenPosition = worldPosition.clone();
+        screenPosition.project(camera);
+
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const x = (screenPosition.x * 0.5 + 0.5) * width;
+        const y = (-screenPosition.y * 0.5 + 0.5) * height;
+
+        if (screenPosition.z > 1 || x < 0 || x > width || y < 0 || y > height) {
+            this.hideTowerProgressBar(tower);
+            return;
+        }
+
+        let progressBar = this.towerProgressBars.get(tower);
+
+        if (!progressBar) {
+            progressBar = document.createElement('div');
+            progressBar.className = 'tower-progress-bar';
+            progressBar.style.cssText = `
+                position: fixed;
+                width: 120px;
+                height: 20px;
+                background: rgba(0, 0, 0, 0.7);
+                border: 2px solid rgba(255, 255, 255, 0.8);
+                border-radius: 4px;
+                pointer-events: none;
+                z-index: 1500;
+                transform: translate(-50%, -50%);
+            `;
+
+            const progressFill = document.createElement('div');
+            progressFill.className = 'tower-progress-fill';
+            progressFill.style.cssText = `
+                width: 0%;
+                height: 100%;
+                background: linear-gradient(90deg, #6a5a4a, #8b7355);
+                border-radius: 2px;
+                transition: width 0.1s linear;
+            `;
+            progressBar.appendChild(progressFill);
+
+            document.body.appendChild(progressBar);
+            this.towerProgressBars.set(tower, progressBar);
+        }
+
+        progressBar.style.left = `${x}px`;
+        progressBar.style.top = `${y}px`;
+
+        const progressFill = progressBar.querySelector('.tower-progress-fill');
+        if (progressFill) {
+            const progressPercent = Math.min(100, Math.max(0, progress * 100));
+            progressFill.style.width = `${progressPercent}%`;
+        }
+    }
+
+    hideTowerProgressBar(tower) {
+        const progressBar = this.towerProgressBars.get(tower);
+        if (progressBar) {
+            progressBar.remove();
+            this.towerProgressBars.delete(tower);
+        }
+    }
+
+    updateTowerProgressBars(towers, camera) {
+        const interactingTowers = new Set();
+
+        for (const tower of towers) {
+            if (tower.getIsBuilt && tower.getIsBuilt()) {
+                if (tower.isInteracting) {
+                    interactingTowers.add(tower);
+                    this.showTowerProgressBar(tower, tower.interactionProgress, camera);
+                } else {
+                    this.hideTowerProgressBar(tower);
+                }
+            }
+        }
+
+        for (const [tower, bar] of this.towerProgressBars.entries()) {
+            if (!interactingTowers.has(tower)) {
+                this.hideTowerProgressBar(tower);
+            }
+        }
+    }
+
+    showTotemProgressBar(totem, progress, camera) {
+        if (!totem || !camera || !totem.mesh) return;
+
+        const worldPosition = totem.getPosition().clone();
+        worldPosition.y += 4;
+
+        const screenPosition = worldPosition.clone();
+        screenPosition.project(camera);
+
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const x = (screenPosition.x * 0.5 + 0.5) * width;
+        const y = (-screenPosition.y * 0.5 + 0.5) * height;
+
+        if (screenPosition.z > 1 || x < 0 || x > width || y < 0 || y > height) {
+            this.hideTotemProgressBar();
+            return;
+        }
+
+        if (!this.totemProgressBar) {
+            this.totemProgressBar = document.createElement('div');
+            this.totemProgressBar.className = 'totem-progress-bar';
+            this.totemProgressBar.style.cssText = `
+                position: fixed;
+                width: 120px;
+                height: 20px;
+                background: rgba(0, 0, 0, 0.7);
+                border: 2px solid rgba(255, 255, 255, 0.8);
+                border-radius: 4px;
+                pointer-events: none;
+                z-index: 1500;
+                transform: translate(-50%, -50%);
+            `;
+
+            const progressFill = document.createElement('div');
+            progressFill.className = 'totem-progress-fill';
+            progressFill.style.cssText = `
+                width: 0%;
+                height: 100%;
+                background: linear-gradient(90deg, #4a7c59, #5a8c69);
+                border-radius: 2px;
+                transition: width 0.1s linear;
+            `;
+            this.totemProgressBar.appendChild(progressFill);
+
+            document.body.appendChild(this.totemProgressBar);
+        }
+
+        this.totemProgressBar.style.left = `${x}px`;
+        this.totemProgressBar.style.top = `${y}px`;
+
+        const progressFill = this.totemProgressBar.querySelector('.totem-progress-fill');
+        if (progressFill) {
+            const progressPercent = Math.min(100, Math.max(0, progress * 100));
+            progressFill.style.width = `${progressPercent}%`;
+        }
+    }
+
+    hideTotemProgressBar() {
+        if (this.totemProgressBar) {
+            this.totemProgressBar.remove();
+            this.totemProgressBar = null;
+        }
+    }
+
+    updateTotemProgressBar(totem, progress, camera, isInteracting) {
+        if (isInteracting) {
+            this.showTotemProgressBar(totem, progress, camera);
+        } else {
+            this.hideTotemProgressBar();
+        }
+    }
     
     showTooltip(target, config, camera) {
         if (!target || !camera || !target.getPosition) return;
@@ -433,6 +598,14 @@ export class InteractionUI {
             if (progressBar) {
                 progressBar.style.display = 'none';
             }
+        }
+        for (const progressBar of this.towerProgressBars.values()) {
+            if (progressBar) {
+                progressBar.style.display = 'none';
+            }
+        }
+        if (this.totemProgressBar) {
+            this.totemProgressBar.style.display = 'none';
         }
         
         // Hide edge indicators

@@ -382,6 +382,18 @@ export class UIManager {
             this.interactionUI.updateCatDenProgressBars(buildings, camera);
         }
     }
+
+    updateTowerProgressBars(towers, camera) {
+        if (this.interactionUI) {
+            this.interactionUI.updateTowerProgressBars(towers, camera);
+        }
+    }
+
+    updateTotemProgressBar(totem, progress, camera, isInteracting) {
+        if (this.interactionUI) {
+            this.interactionUI.updateTotemProgressBar(totem, progress, camera, isInteracting);
+        }
+    }
     
     showTooltip(target, config, camera) {
         if (this.interactionUI) {

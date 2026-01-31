@@ -5,7 +5,8 @@ export const BUILDING_CONFIG = {
         attackRange: 8.0,
         attackDamage: 2,
         attackCooldown: 1.5, // seconds
-        interactionRange: 2.5
+        interactionRange: 2.5,
+        interactionDuration: 1.5 // seconds to assign/unassign a cat
     },
     
     catDen: {
@@ -21,6 +22,8 @@ export const BUILDING_CONFIG = {
     forestTotem: {
         health: 100,
         maxHealth: 100,
-        influenceRadius: 15.0
+        influenceRadius: 15.0,
+        interactionRange: 2.5,
+        interactionDuration: 3.0 // seconds to start night
     }
 };

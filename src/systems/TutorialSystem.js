@@ -27,14 +27,14 @@ export class TutorialSystem {
             },
             {
                 name: "Assign cat to tower",
-                instructions: "Build a Tower, then stand near it and press Space to assign a cat",
-                controls: "Press Space near Tower",
+                instructions: "Build a Tower, then stand near it and hold Space to assign a cat",
+                controls: "Hold Space near Tower",
                 completionCheck: null
             },
             {
                 name: "Go to night",
-                instructions: "Click the End Day button to start the night and face the enemies",
-                controls: "Click End Day button",
+                instructions: "Hold Space near the Totem or click the End Day button to start the night",
+                controls: "Hold Space near Totem or click End Day",
                 completionCheck: null
             },
             {
