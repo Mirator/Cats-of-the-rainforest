@@ -16,7 +16,7 @@ export class Tower extends BaseModel {
         
         // Cat assignment
         this.assignedCat = null;
-        this.isActive = false;
+        this.isActiveFlag = false;
         
         // Combat properties
         this.attackRange = BUILDING_CONFIG.tower.attackRange;
@@ -55,9 +55,9 @@ export class Tower extends BaseModel {
         this.assignedCat = cat;
         if (cat) {
             cat.assignToTower(this);
-            this.isActive = true;
+            this.isActiveFlag = true;
         } else {
-            this.isActive = false;
+            this.isActiveFlag = false;
         }
     }
     
@@ -66,11 +66,11 @@ export class Tower extends BaseModel {
             this.assignedCat.unassignFromTower();
             this.assignedCat = null;
         }
-        this.isActive = false;
+        this.isActiveFlag = false;
     }
     
     isActive() {
-        return this.isActive && this.assignedCat !== null;
+        return this.isActiveFlag && this.assignedCat !== null;
     }
     
     canInteract(playerPosition, daySystem) {
