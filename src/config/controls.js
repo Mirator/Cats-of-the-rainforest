@@ -31,7 +31,7 @@ export const CONTROLS = {
     selectItem9: ['9'],
     menuUp: ['ArrowUp'],
     menuDown: ['ArrowDown'],
-    menuConfirm: ['Enter'],
+    menuConfirm: ['Enter', ' ', 'Space'],
     
     // Placement mode movement (same as regular movement)
     placementUp: ['w', 'ArrowUp'],

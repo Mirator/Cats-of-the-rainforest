@@ -258,8 +258,8 @@ export class BuildModeUI {
         if (inMenu) {
             this.buildInstructions.innerHTML = `
                 <div style="font-weight: bold; margin-bottom: 8px; color: #ffd700;">How to Build:</div>
-                <div>Press <strong>1</strong> or click to select Cat Den</div>
-                <div style="margin-top: 5px; font-size: 12px; color: #aaa;">Use Arrow Keys to navigate, Enter to confirm</div>
+                <div>Press a number key or click to select a building</div>
+                <div style="margin-top: 5px; font-size: 12px; color: #aaa;">Use Arrow Keys to navigate, Enter or Space to confirm</div>
             `;
         } else {
             this.buildInstructions.innerHTML = `

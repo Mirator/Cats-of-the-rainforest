@@ -1397,6 +1397,15 @@ export class Game {
     }
     
     handleTreeCutting(deltaTime) {
+        if (this.buildModeSystem.isActive()) {
+            for (const tree of this.trees) {
+                if (tree.isInteracting) {
+                    tree.stopInteraction();
+                }
+            }
+            return;
+        }
+
         if (!this.daySystem.isDay()) {
             return; // Can't cut trees at night
         }
@@ -1463,6 +1472,16 @@ export class Game {
     }
     
     handleCatDenInteractions(deltaTime) {
+        if (this.buildModeSystem.isActive()) {
+            this.catDenInteractionHoldLock = false;
+            for (const building of this.buildings) {
+                if (building instanceof CatDen && building.isInteracting) {
+                    building.stopInteraction();
+                }
+            }
+            return;
+        }
+
         if (!this.daySystem.isDay()) {
             return; // Can only interact during day
         }
@@ -1561,6 +1580,11 @@ export class Game {
     }
 
     handleTotemInteractions(deltaTime) {
+        if (this.buildModeSystem.isActive()) {
+            this.stopTotemInteraction();
+            return;
+        }
+
         if (!this.daySystem.isDay()) {
             this.stopTotemInteraction();
             return;
@@ -1690,6 +1714,16 @@ export class Game {
     }
     
     handleTowerInteractions(deltaTime) {
+        if (this.buildModeSystem.isActive()) {
+            this.towerInteractionHoldLock = false;
+            for (const tower of this.towers) {
+                if (tower.isInteracting) {
+                    tower.stopInteraction();
+                }
+            }
+            return;
+        }
+
         if (!this.daySystem.isDay()) {
             // Stop interactions when night begins
             for (const tower of this.towers) {
