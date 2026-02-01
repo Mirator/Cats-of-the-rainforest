@@ -97,7 +97,7 @@ export class MenuUI {
         mainMenu.innerHTML = `
             <h1 style="font-size: 64px; margin-bottom: 20px; color: #ffd700; text-align: center;">Cats of the Rainforest</h1>
             <p style="font-size: 20px; margin-bottom: 40px; text-align: center; color: #aaa; max-width: 720px; line-height: 1.5;">
-                Lead your cat tribe to defend the forest totem from the masked mice.
+                Lead your cat tribe to defend the forest totem from the mice.
                 To raise defenses, you must fell trees—the more you cut, the safer the tribe, but the weaker the rainforest.
                 Every victory asks a question: how much of the forest will you spend to save it?
             </p>
