@@ -4,7 +4,7 @@ export const BUILDING_CONFIG = {
         size: 1.5, // Collision radius
         attackRange: 7.0,
         attackDamage: 1.8,
-        attackCooldown: 1.4, // seconds
+        attackCooldown: 0.7, // seconds
         projectileSpeed: 10.0, // units per second
         projectileRadius: 0.12,
         projectileHitRadius: 0.35,
@@ -16,6 +16,7 @@ export const BUILDING_CONFIG = {
         size: 1.5, // Collision radius
         interactionRange: 2.5,
         interactionDuration: 1.5, // seconds to spawn cat
+        maxCats: 3,
         spawnCost: {
             food: 2,
             stamina: 1

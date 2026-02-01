@@ -1138,6 +1138,12 @@ export class Game {
         }
         
         if (nearestCatDen) {
+            const canSpawnCat = typeof nearestCatDen.canSpawnCat !== 'function' || nearestCatDen.canSpawnCat();
+
+            if (!canSpawnCat && nearestCatDen.isInteracting) {
+                nearestCatDen.stopInteraction();
+            }
+
             if (spaceHeld && !this.catDenInteractionHoldLock) {
                 // Check if interaction is complete (progress reached 1.0) BEFORE starting new interaction
                 if (nearestCatDen.interactionProgress >= 1.0) {
@@ -1145,7 +1151,8 @@ export class Game {
                     const spawnCost = nearestCatDen.getSpawnCost();
                     if (this.resourceSystem.canAffordFood(spawnCost.food) && 
                         this.daySystem.hasStamina() && 
-                        this.daySystem.getStamina() >= spawnCost.stamina) {
+                        this.daySystem.getStamina() >= spawnCost.stamina &&
+                        canSpawnCat) {
                         // Deduct resources
                         this.resourceSystem.spendFood(spawnCost.food);
                         this.daySystem.consumeStamina(spawnCost.stamina);
@@ -1166,7 +1173,8 @@ export class Game {
                     const spawnCost = nearestCatDen.getSpawnCost();
                     if (this.resourceSystem.canAffordFood(spawnCost.food) && 
                         this.daySystem.hasStamina() && 
-                        this.daySystem.getStamina() >= spawnCost.stamina) {
+                        this.daySystem.getStamina() >= spawnCost.stamina &&
+                        canSpawnCat) {
                         nearestCatDen.startInteraction();
                     }
                 }
@@ -1231,6 +1239,9 @@ export class Game {
     }
     
     spawnCatFromDen(catDen) {
+        if (catDen && typeof catDen.canSpawnCat === 'function' && !catDen.canSpawnCat()) {
+            return;
+        }
         // Create cat at Cat Den position with player's mask color
         const denPos = catDen.getPosition();
         const playerMaskColor = this.player.getMaskColor();
@@ -1252,6 +1263,10 @@ export class Game {
         
         // Track for tutorial
         this.catsSpawnedCount++;
+
+        if (catDen && typeof catDen.registerSpawnedCat === 'function') {
+            catDen.registerSpawnedCat();
+        }
         
         // Visual effect for cat spawn
         this.sceneManager.createParticleEffect(denPos, 'catSpawn');
@@ -1279,14 +1294,21 @@ export class Game {
                     const hasFood = this.resourceSystem.canAffordFood(spawnCost.food);
                     const hasStamina = this.daySystem.hasStamina() && 
                                       this.daySystem.getStamina() >= spawnCost.stamina;
-                    const hasResources = hasFood && hasStamina;
+                    const hasCapacity = typeof building.canSpawnCat !== 'function' || building.canSpawnCat();
+                    const hasResources = hasFood && hasStamina && hasCapacity;
+                    const catCount = typeof building.getCatCount === 'function' ? building.getCatCount() : null;
+                    const maxCats = typeof building.getMaxCats === 'function' ? building.getMaxCats() : null;
+                    const countText = catCount !== null && maxCats !== null ? ` (${catCount}/${maxCats})` : '';
+                    const title = hasCapacity ? `Spawn Cat${countText}` : `Den Full${countText}`;
                     
                     tooltipTargets.push({
                         target: building,
                         config: {
-                            title: 'Spawn Cat',
-                            cost: { type: 'food', amount: spawnCost.food },
-                            secondaryCost: { type: 'stamina', amount: spawnCost.stamina },
+                            title,
+                            ...(hasCapacity ? {
+                                cost: { type: 'food', amount: spawnCost.food },
+                                secondaryCost: { type: 'stamina', amount: spawnCost.stamina }
+                            } : {}),
                             hasResources: hasResources,
                             worldOffset: { x: 0, y: 4.5, z: 0 }
                         },

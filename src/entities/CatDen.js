@@ -14,6 +14,8 @@ export class CatDen extends BaseModel {
         
         this.size = BUILDING_CONFIG.catDen.size;
         this.isBuilt = false;
+        this.maxCats = BUILDING_CONFIG.catDen.maxCats;
+        this.spawnedCats = 0;
         
         // Interaction state (similar to Tree)
         this.isInteracting = false;
@@ -133,6 +135,24 @@ export class CatDen extends BaseModel {
     
     getSpawnCost() {
         return BUILDING_CONFIG.catDen.spawnCost;
+    }
+
+    getCatCount() {
+        return this.spawnedCats;
+    }
+
+    getMaxCats() {
+        return this.maxCats;
+    }
+
+    canSpawnCat() {
+        return this.spawnedCats < this.maxCats;
+    }
+
+    registerSpawnedCat() {
+        if (this.canSpawnCat()) {
+            this.spawnedCats += 1;
+        }
     }
     
     startInteraction() {
