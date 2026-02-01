@@ -1905,6 +1905,15 @@ export class Game {
             return;
         }
 
+        // Capture totem HP percentage before regeneration for next wave difficulty calculation
+        if (this.forestTotem && !this.forestTotem.isDestroyed()) {
+            const hpPercentage = this.forestTotem.getHealthPercentage();
+            this.waveSystem.setPreviousNightTotemHP(hpPercentage);
+        } else {
+            // Totem destroyed - set to 0% for maximum easier difficulty
+            this.waveSystem.setPreviousNightTotemHP(0.0);
+        }
+
         this.playSfx('wave_complete');
         // Move to next day (which will start next wave)
         this.daySystem.startNextDay();

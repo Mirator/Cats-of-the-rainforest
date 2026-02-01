@@ -8,6 +8,8 @@ export class WaveSystem {
         this.enemiesToSpawn = 0;
         this.enemiesKilled = 0;
         this.waveConfig = null;
+        this.previousNightTotemHP = null; // HP percentage from previous night (0.0 to 1.0)
+        this.previousWaveDifficultyMultiplier = null; // Difficulty multiplier from previous wave
     }
 
     startWave(waveNumber) {
@@ -15,13 +17,99 @@ export class WaveSystem {
         this.isWaveActive = true;
         this.enemiesSpawned = 0;
         this.enemiesKilled = 0;
-        this.waveConfig = this.getWaveConfig(waveNumber);
+        
+        // Calculate difficulty multiplier based on previous night's totem HP
+        let difficultyMultiplier = 1.0;
+        if (this.previousNightTotemHP !== null && waveNumber > 1) {
+            // If previous wave had easier difficulty, force next wave to be normal
+            if (this.previousWaveDifficultyMultiplier !== null && this.previousWaveDifficultyMultiplier < 1.0) {
+                difficultyMultiplier = 1.0; // Normal difficulty
+            } else {
+                // Formula: difficultyMultiplier = 1.0 + (hpPercentage - 0.5) * 0.4
+                // At 100% HP: 1.2 (+20%), At 50% HP: 1.0 (base), At 0% HP: 0.8 (-20%)
+                difficultyMultiplier = 1.0 + (this.previousNightTotemHP - 0.5) * 0.4;
+            }
+        }
+        
+        this.waveConfig = this.getWaveConfig(waveNumber, difficultyMultiplier);
         this.enemiesToSpawn = this.waveConfig.enemyCount;
+        
+        // Store this wave's difficulty multiplier for next wave calculation
+        this.previousWaveDifficultyMultiplier = difficultyMultiplier;
     }
 
-    getWaveConfig(waveNumber) {
+    setPreviousNightTotemHP(hpPercentage) {
+        // Clamp HP percentage between 0 and 1
+        this.previousNightTotemHP = Math.max(0, Math.min(1, hpPercentage));
+    }
+
+    getWaveConfig(waveNumber, difficultyMultiplier = 1.0) {
         const baseConfigs = WAVE_CONFIG.baseWaves;
-        return { ...baseConfigs[waveNumber] };
+        const baseConfig = baseConfigs[waveNumber];
+        
+        if (!baseConfig) {
+            return null;
+        }
+        
+        // Create a copy of the base config
+        const config = { ...baseConfig };
+        
+        // Apply difficulty multiplier to enemy count
+        config.enemyCount = Math.max(1, Math.round(baseConfig.enemyCount * difficultyMultiplier));
+        
+        // Apply difficulty multiplier to HP multiplier
+        config.hpMultiplier = baseConfig.hpMultiplier * difficultyMultiplier;
+        
+        // Apply inverse multiplier to spawn interval (harder = faster spawns, easier = slower spawns)
+        config.spawnInterval = baseConfig.spawnInterval / difficultyMultiplier;
+        
+        // Optionally adjust enemy types probabilities based on difficulty
+        if (difficultyMultiplier !== 1.0 && config.enemyTypes) {
+            // Count harder enemy types (fast and strong)
+            const harderTypes = config.enemyTypes.filter(type => type.type === 'fast' || type.type === 'strong');
+            const harderTypeCount = harderTypes.length;
+            
+            if (difficultyMultiplier > 1.0 && harderTypeCount > 0) {
+                // Shift probabilities toward harder types when difficulty increases
+                const shiftAmount = (difficultyMultiplier - 1.0) * 0.3; // Max 6% shift at +20% difficulty
+                const shiftPerHarderType = shiftAmount / harderTypeCount;
+                
+                config.enemyTypes = config.enemyTypes.map(type => {
+                    const newProb = { ...type };
+                    if (type.type === 'regular') {
+                        newProb.probability = Math.max(0, type.probability - shiftAmount);
+                    } else if (type.type === 'fast' || type.type === 'strong') {
+                        newProb.probability = type.probability + shiftPerHarderType;
+                    }
+                    return newProb;
+                });
+            } else if (difficultyMultiplier < 1.0 && harderTypeCount > 0) {
+                // Shift probabilities toward easier types when difficulty decreases
+                const shiftAmount = (1.0 - difficultyMultiplier) * 0.3; // Max 6% shift at -20% difficulty
+                const shiftPerHarderType = shiftAmount / harderTypeCount;
+                
+                config.enemyTypes = config.enemyTypes.map(type => {
+                    const newProb = { ...type };
+                    if (type.type === 'regular') {
+                        newProb.probability = Math.min(1, type.probability + shiftAmount);
+                    } else if (type.type === 'fast' || type.type === 'strong') {
+                        newProb.probability = Math.max(0, type.probability - shiftPerHarderType);
+                    }
+                    return newProb;
+                });
+            }
+            
+            // Normalize probabilities to sum to 1.0
+            const totalProb = config.enemyTypes.reduce((sum, type) => sum + type.probability, 0);
+            if (totalProb > 0) {
+                config.enemyTypes = config.enemyTypes.map(type => ({
+                    ...type,
+                    probability: type.probability / totalProb
+                }));
+            }
+        }
+        
+        return config;
     }
 
     onEnemySpawned() {
