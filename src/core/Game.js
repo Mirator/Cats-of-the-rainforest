@@ -8,6 +8,7 @@ import { EnemySystem } from '../systems/EnemySystem.js';
 import { WaveSystem } from '../systems/WaveSystem.js';
 import { BuildModeSystem, BuildModeState } from '../systems/BuildModeSystem.js';
 import { TutorialSystem } from '../systems/TutorialSystem.js';
+import { AudioManager } from './AudioManager.js';
 import { Player } from '../entities/Player.js';
 import { Tree } from '../entities/Tree.js';
 import { ForestTotem } from '../entities/ForestTotem.js';
@@ -31,6 +32,7 @@ export class Game {
         this.container = container;
         this.sceneManager = null;
         this.inputManager = null;
+        this.audioManager = null;
         this.mapSystem = null;
         this.resourceSystem = null;
         this.daySystem = null;
@@ -89,6 +91,7 @@ export class Game {
         // Initialize core systems
         this.sceneManager = new SceneManager(this.container);
         this.inputManager = new InputManager();
+        this.audioManager = new AudioManager();
         this.mapSystem = new MapSystem(this.sceneManager.scene);
         this.resourceSystem = new ResourceSystem();
         this.daySystem = new DaySystem();
@@ -183,6 +186,8 @@ export class Game {
             if (dayInfo.state === DayState.DAY) {
                 this.regenerateTotemHealth();
             }
+
+            this.updateAudioState();
         });
         
         // Set initial day visuals
@@ -1589,6 +1594,7 @@ export class Game {
         this.uiManager.showMainMenu(() => {
             this.startGame();
         });
+        this.updateAudioState();
         // Start game loop for rendering (updates are skipped when in menu state)
         this.gameLoop(this.lastTime);
     }
@@ -1604,10 +1610,12 @@ export class Game {
                 this.tutorialSystem.start();
                 this.uiManager.showTutorial();
                 this.updateTutorialUI();
+                this.updateAudioState();
             },
             () => {
                 // No - skip tutorial
                 this.tutorialSystem.stop();
+                this.updateAudioState();
             }
         );
     }
@@ -1668,6 +1676,7 @@ export class Game {
     pauseGame() {
         if (this.gameState === 'playing') {
             this.gameState = 'paused';
+            this.updateAudioState();
             this.uiManager.showPauseMenu(
                 () => this.resumeGame(),
                 () => this.restartGame()
@@ -1678,6 +1687,7 @@ export class Game {
     resumeGame() {
         if (this.gameState === 'paused') {
             this.gameState = 'playing';
+            this.updateAudioState();
             this.uiManager.hidePauseMenu();
         }
     }
@@ -1689,11 +1699,31 @@ export class Game {
     
     stop() {
         this.isRunning = false;
+        if (this.audioManager) {
+            this.audioManager.stopAll();
+        }
         if (this.inputManager) {
             this.inputManager.destroy();
         }
         if (this.sceneManager) {
             this.sceneManager.destroy();
+        }
+    }
+
+    updateAudioState() {
+        if (!this.audioManager) return;
+        const isMenu = this.gameState === 'menu';
+        const isDay = this.daySystem?.getState() === DayState.DAY;
+
+        if (isMenu) {
+            this.audioManager.stopMusic();
+            return;
+        }
+
+        if (isDay) {
+            this.audioManager.playMusic('day', { loop: true, volume: 1, transition: true, fadeDuration: 2 });
+        } else {
+            this.audioManager.playMusic('night', { loop: true, volume: 1, transition: true, fadeDuration: 2 });
         }
     }
 }
