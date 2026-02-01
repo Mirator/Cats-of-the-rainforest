@@ -623,7 +623,7 @@ export class Game {
             group.add(smallRing);
             group.add(auraRing);
 
-            const totemLight = new THREE.PointLight(0xffe2a1, 1.4, 8, 2);
+            const totemLight = new THREE.PointLight(0xffe2a1, 2.8, 8, 2);
             totemLight.position.set(totemPos.x, totemPos.y + 1.7, totemPos.z);
             group.add(totemLight);
 
@@ -648,7 +648,7 @@ export class Game {
             this.tutorialFocusTargets = [totemPos, totemTop];
             this.tutorialFocusRadii = [260, 230];
             this.tutorialFocusActive = true;
-            this.tutorialFocusOpacity = 0.35;
+            this.tutorialFocusOpacity = 0.2;
         } else if (stepIndex === 1) {
             const group = new THREE.Group();
             const treeCandidates = this.trees.filter((tree) => !tree.isCut && !tree.isFalling);
@@ -679,11 +679,11 @@ export class Game {
                 outerRing.userData.pulseAmplitude = 0.08;
                 group.add(outerRing);
 
-                const treeBottomLight = new THREE.PointLight(0xffe2a1, 1.6, 10, 2);
+                const treeBottomLight = new THREE.PointLight(0xffe2a1, 3.2, 10, 2);
                 treeBottomLight.position.set(tree.position.x, tree.position.y + 0.4, tree.position.z);
                 group.add(treeBottomLight);
 
-                const treeTopLight = new THREE.PointLight(0xffe2a1, 2.0, 12, 2);
+                const treeTopLight = new THREE.PointLight(0xffe2a1, 4.0, 12, 2);
                 treeTopLight.position.set(tree.position.x, tree.position.y + 2.8, tree.position.z);
                 group.add(treeTopLight);
                 focusTargets.push(tree.position);
@@ -696,7 +696,7 @@ export class Game {
                 this.tutorialFocusTargets = focusTargets;
                 this.tutorialFocusRadii = focusRadii;
                 this.tutorialFocusActive = true;
-                this.tutorialFocusOpacity = 0.25;
+                this.tutorialFocusOpacity = 0.15;
             } else {
                 this.clearTutorialHighlights();
             }

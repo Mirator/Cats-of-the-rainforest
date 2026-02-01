@@ -116,7 +116,7 @@ export class TutorialUI {
     updateFocusOverlay(points = [], options = {}) {
         if (!this.focusOverlay) return;
 
-        const baseOpacity = typeof options.baseOpacity === 'number' ? options.baseOpacity : 0.6;
+        const baseOpacity = typeof options.baseOpacity === 'number' ? options.baseOpacity : 0.4;
         const baseColor = `rgba(0, 0, 0, ${baseOpacity})`;
         if (!points.length) {
             this.focusOverlay.style.background = baseColor;

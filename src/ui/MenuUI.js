@@ -1,5 +1,3 @@
-import { CONTROLS } from '../config/controls.js';
-
 // Menu UI - Main menu, pause menu, controls screen
 export class MenuUI {
     constructor() {
@@ -252,11 +250,7 @@ export class MenuUI {
     }
     
     showControlsScreen(onBack) {
-        // Remove existing controls screen if present
-        const existingScreen = document.getElementById('controls-screen');
-        if (existingScreen) {
-            existingScreen.remove();
-        }
+        this.hideControlsScreen();
         
         const controlsScreen = document.createElement('div');
         controlsScreen.id = 'controls-screen';
@@ -279,8 +273,8 @@ export class MenuUI {
             padding: 40px 20px;
         `;
         
-        // Group controls by category
-        const groupedControls = this.groupControlsByCategory(CONTROLS);
+        // Use a shorter, player-friendly controls list
+        const groupedControls = this.getBriefControls();
         
         // Create content container
         const contentContainer = document.createElement('div');
@@ -301,7 +295,7 @@ export class MenuUI {
         contentContainer.appendChild(title);
         
         // Create controls list by category
-        for (const [category, controls] of Object.entries(groupedControls)) {
+        for (const { category, items } of groupedControls) {
             const categoryDiv = document.createElement('div');
             categoryDiv.style.cssText = `
                 margin-bottom: 30px;
@@ -325,7 +319,7 @@ export class MenuUI {
                 gap: 10px;
             `;
             
-            for (const { key, keys } of controls) {
+            for (const { label, keys } of items) {
                 const controlItem = document.createElement('div');
                 controlItem.style.cssText = `
                     display: flex;
@@ -337,7 +331,7 @@ export class MenuUI {
                 `;
                 
                 const description = document.createElement('span');
-                description.textContent = this.getControlDescription(key);
+                description.textContent = label;
                 description.style.cssText = `
                     font-size: 16px;
                     flex: 1;
@@ -410,12 +404,80 @@ export class MenuUI {
                 onBack();
             }
         });
+
+        // Back to top button + tooltip
+        const backToTopButton = document.createElement('button');
+        backToTopButton.textContent = 'Top';
+        backToTopButton.title = 'Back to top';
+        backToTopButton.style.cssText = `
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: bold;
+            background: rgba(74, 124, 89, 0.9);
+            color: white;
+            border: 2px solid #228b22;
+            border-radius: 999px;
+            cursor: pointer;
+            z-index: 2200;
+            transition: all 0.2s;
+        `;
+        const backToTopTooltip = document.createElement('div');
+        backToTopTooltip.textContent = 'Back to top';
+        backToTopTooltip.style.cssText = `
+            position: fixed;
+            right: 24px;
+            bottom: 66px;
+            padding: 6px 10px;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border-radius: 6px;
+            opacity: 0;
+            transform: translateY(4px);
+            pointer-events: none;
+            transition: all 0.2s;
+            z-index: 2200;
+        `;
+        backToTopButton.addEventListener('mouseenter', () => {
+            backToTopButton.style.background = '#5a8c69';
+            backToTopButton.style.transform = 'translateY(-2px)';
+            backToTopTooltip.style.opacity = '1';
+            backToTopTooltip.style.transform = 'translateY(0)';
+        });
+        backToTopButton.addEventListener('mouseleave', () => {
+            backToTopButton.style.background = 'rgba(74, 124, 89, 0.9)';
+            backToTopButton.style.transform = 'translateY(0)';
+            backToTopTooltip.style.opacity = '0';
+            backToTopTooltip.style.transform = 'translateY(4px)';
+        });
+        backToTopButton.addEventListener('click', () => {
+            if (typeof controlsScreen.scrollTo === 'function') {
+                controlsScreen.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                controlsScreen.scrollTop = 0;
+            }
+        });
         
         controlsScreen.appendChild(contentContainer);
         controlsScreen.appendChild(backButton);
+        controlsScreen.appendChild(backToTopTooltip);
+        controlsScreen.appendChild(backToTopButton);
         document.body.appendChild(controlsScreen);
         
         this.controlsScreen = controlsScreen;
+        this.controlsBackHandler = onBack;
+        this.controlsKeyHandler = (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                if (this.controlsBackHandler) {
+                    this.controlsBackHandler();
+                }
+            }
+        };
+        window.addEventListener('keydown', this.controlsKeyHandler);
     }
     
     hideControlsScreen() {
@@ -424,6 +486,11 @@ export class MenuUI {
             controlsScreen.remove();
         }
         this.controlsScreen = null;
+        if (this.controlsKeyHandler) {
+            window.removeEventListener('keydown', this.controlsKeyHandler);
+            this.controlsKeyHandler = null;
+        }
+        this.controlsBackHandler = null;
     }
     
     formatKeyName(key) {
@@ -435,7 +502,10 @@ export class MenuUI {
             'ArrowRight': '→',
             'Escape': 'ESC',
             'Enter': 'Enter',
-            'RightClick': 'Right Click'
+            'RightClick': 'Right Click',
+            'WASD': 'WASD',
+            'Arrows': 'Arrows',
+            '1-9': '1-9'
         };
         
         if (keyMap[key]) {
@@ -444,79 +514,38 @@ export class MenuUI {
         
         return key.charAt(0).toUpperCase() + key.slice(1);
     }
-    
-    getControlDescription(controlKey) {
-        const descriptions = {
-            moveUp: 'Move Up',
-            moveDown: 'Move Down',
-            moveLeft: 'Move Left',
-            moveRight: 'Move Right',
-            interact: 'Interact / Cut Trees / Spawn & Assign Cats (Day)',
-            attack: 'Attack Enemies (Night)',
-            toggleBuildMode: 'Toggle Build Mode',
-            exitBuildMode: 'Exit Build Mode / Pause Menu',
-            confirmBuild: 'Confirm Build Placement (Day)',
-            cancelBuild: 'Cancel Build Placement',
-            pauseMenu: 'Open Pause Menu',
-            selectItem1: 'Select Build Item 1',
-            selectItem2: 'Select Build Item 2',
-            selectItem3: 'Select Build Item 3',
-            selectItem4: 'Select Build Item 4',
-            selectItem5: 'Select Build Item 5',
-            selectItem6: 'Select Build Item 6',
-            selectItem7: 'Select Build Item 7',
-            selectItem8: 'Select Build Item 8',
-            selectItem9: 'Select Build Item 9',
-            menuUp: 'Menu Navigation Up',
-            menuDown: 'Menu Navigation Down',
-            menuConfirm: 'Menu Confirm Selection',
-            placementUp: 'Placement Mode - Move Up',
-            placementDown: 'Placement Mode - Move Down',
-            placementLeft: 'Placement Mode - Move Left',
-            placementRight: 'Placement Mode - Move Right'
-        };
-        
-        return descriptions[controlKey] || controlKey;
+
+    getBriefControls() {
+        return [
+            {
+                category: 'Movement',
+                items: [
+                    { label: 'Move', keys: ['WASD', 'Arrows'] }
+                ]
+            },
+            {
+                category: 'Actions',
+                items: [
+                    { label: 'Interact / Use', keys: ['Space'] },
+                    { label: 'Attack (Night)', keys: ['F', 'Space'] }
+                ]
+            },
+            {
+                category: 'Build & Placement',
+                items: [
+                    { label: 'Build Menu', keys: ['B'] },
+                    { label: 'Confirm / Place', keys: ['Enter', 'Space'] },
+                    { label: 'Cancel / Back', keys: ['Escape', 'RightClick'] },
+                    { label: 'Quick Select', keys: ['1-9'] }
+                ]
+            },
+            {
+                category: 'Menus',
+                items: [
+                    { label: 'Pause / Back', keys: ['Escape'] }
+                ]
+            }
+        ];
     }
     
-    groupControlsByCategory(controls) {
-        const categories = {
-            'Movement': ['moveUp', 'moveDown', 'moveLeft', 'moveRight'],
-            'Actions': ['interact', 'attack'],
-            'Build Mode': ['toggleBuildMode', 'exitBuildMode', 'confirmBuild', 'cancelBuild'],
-            'Build Menu Navigation': ['selectItem1', 'selectItem2', 'selectItem3', 'selectItem4', 'selectItem5', 'selectItem6', 'selectItem7', 'selectItem8', 'selectItem9', 'menuUp', 'menuDown', 'menuConfirm'],
-            'Placement Mode': ['placementUp', 'placementDown', 'placementLeft', 'placementRight'],
-            'Game Menu': ['pauseMenu']
-        };
-        
-        const grouped = {};
-        const usedKeys = new Set();
-        
-        for (const [category, keys] of Object.entries(categories)) {
-            grouped[category] = [];
-            for (const key of keys) {
-                if (controls[key]) {
-                    grouped[category].push({ key, keys: controls[key] });
-                    usedKeys.add(key);
-                }
-            }
-        }
-        
-        for (const [key, keys] of Object.entries(controls)) {
-            if (!usedKeys.has(key)) {
-                if (!grouped['Other']) {
-                    grouped['Other'] = [];
-                }
-                grouped['Other'].push({ key, keys });
-            }
-        }
-        
-        for (const category of Object.keys(grouped)) {
-            if (grouped[category].length === 0) {
-                delete grouped[category];
-            }
-        }
-        
-        return grouped;
-    }
 }
