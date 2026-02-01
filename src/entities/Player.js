@@ -80,11 +80,11 @@ export class Player {
             
             // Store facing direction for attack calculations
             // In Three.js: rotation.y=0 faces -Z, rotation.y=π/2 faces -X, rotation.y=π faces +Z, rotation.y=3π/2 faces +X
-            // So forward = (-sin(rotationY), 0, cos(rotationY))
+            // So forward = (-sin(rotationY), 0, -cos(rotationY))
             this.lastFacingDirection.set(
                 -Math.sin(angle),
                 0,
-                Math.cos(angle)
+                -Math.cos(angle)
             ).normalize();
         }
     }
@@ -205,11 +205,11 @@ export class Player {
             const rotationY = this.mesh.rotation.y;
             // Calculate forward direction directly from rotation
             // In Three.js: rotation.y=0 faces -Z, rotation.y=π/2 faces -X, rotation.y=π faces +Z, rotation.y=3π/2 faces +X
-            // So forward = (-sin(rotationY), 0, cos(rotationY))
+            // So forward = (-sin(rotationY), 0, -cos(rotationY))
             playerForward = new THREE.Vector3(
                 -Math.sin(rotationY),
                 0,
-                Math.cos(rotationY)
+                -Math.cos(rotationY)
             ).normalize();
             // Update stored direction
             this.lastFacingDirection.copy(playerForward);
@@ -324,5 +324,20 @@ export class Player {
 
     getFacingRotationY() {
         return this.mesh ? this.mesh.rotation.y : 0;
+    }
+
+    getAttackForward() {
+        if (this.lastFacingDirection && this.lastFacingDirection.lengthSq() > 0.0001) {
+            return this.lastFacingDirection.clone();
+        }
+        if (this.mesh && this.mesh.rotation.y !== undefined) {
+            const rotationY = this.mesh.rotation.y;
+            return new THREE.Vector3(
+                -Math.sin(rotationY),
+                0,
+                -Math.cos(rotationY)
+            ).normalize();
+        }
+        return new THREE.Vector3(0, 0, -1);
     }
 }

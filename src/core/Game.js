@@ -526,15 +526,19 @@ export class Game {
                                    this.inputManager.isAnyKeyPressed(CONTROLS.attack);
                 if (attackInput) {
                     const result = this.player.attack(deltaTime, enemies);
+                    const attackForward = typeof this.player.getAttackForward === 'function'
+                        ? this.player.getAttackForward()
+                        : this.player.lastFacingDirection;
                     // Always show visual feedback when attack is attempted (even if on cooldown)
                     if (result.attacked) {
                         this.sceneManager.createSlashEffect(
                             this.player.getPosition(),
-                            this.player.getFacingRotationY(),
+                            attackForward,
                             this.player.attackRange,
                             this.player.attackArc
                         );
                     }
+                    
                 }
             }
         }

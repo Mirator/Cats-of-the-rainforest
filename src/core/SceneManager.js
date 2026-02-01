@@ -471,47 +471,41 @@ export class SceneManager {
     /**
      * Create a slash effect in front of the player to visualize attack arc/range.
      * @param {THREE.Vector3} position - World position
-     * @param {number} rotationY - Player facing rotation
+     * @param {THREE.Vector3} forwardDirection - Player facing direction (XZ plane)
      * @param {number} range - Attack range
      * @param {number} arc - Attack arc (radians)
      */
-    createSlashEffect(position, rotationY, range, arc) {
+    createSlashEffect(position, forwardDirection, range, arc) {
         const group = new THREE.Group();
         group.position.copy(position);
 
         const ringGeometry = new THREE.RingGeometry(range * 0.82, range, 32, 1, -arc / 2, arc);
+        let forward = forwardDirection ? new THREE.Vector3(forwardDirection.x, 0, forwardDirection.z) : null;
+        if (!forward || forward.lengthSq() < 0.0001) {
+            forward = new THREE.Vector3(1, 0, 0);
+        } else {
+            forward.normalize();
+        }
+        const yaw = Math.atan2(-forward.z, forward.x);
+        group.rotation.y = yaw;
         const ringMaterial = new THREE.MeshBasicMaterial({
             color: 0xf2f2f2,
             transparent: true,
             opacity: 0.5,
-            side: THREE.DoubleSide
+            side: THREE.DoubleSide,
+            depthTest: false,
+            depthWrite: false
         });
         const ring = new THREE.Mesh(ringGeometry, ringMaterial);
         ring.rotation.x = -Math.PI / 2;
-        ring.rotation.y = rotationY + Math.PI / 2;
-        ring.position.y = 0.03;
+        ring.rotation.y = 0;
+        ring.position.y = 0.12;
+        ring.renderOrder = 10;
         group.add(ring);
 
-        const slashGroup = new THREE.Group();
-        const slashMaterial = new THREE.MeshBasicMaterial({
-            color: 0xffffff,
-            transparent: true,
-            opacity: 0.9,
-            side: THREE.DoubleSide
-        });
-        const slashGeometry = new THREE.PlaneGeometry(0.08, Math.min(1.2, range * 0.8));
+        // Only show the arc ring (no slash strokes) for cleaner feedback.
 
-        const slashOffsets = [-0.25, 0, 0.25];
-        for (const offset of slashOffsets) {
-            const slash = new THREE.Mesh(slashGeometry, slashMaterial.clone());
-            slash.position.set(0, 0.9, Math.min(1.2, range * 0.6));
-            slash.rotation.z = Math.PI / 4;
-            slash.rotation.y = offset;
-            slashGroup.add(slash);
-        }
-
-        slashGroup.rotation.y = rotationY;
-        group.add(slashGroup);
+        
 
         this.scene.add(group);
 
