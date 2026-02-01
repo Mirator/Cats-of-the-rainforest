@@ -131,9 +131,7 @@ export class WaveSystem {
     }
 
     hasWon() {
-        // TEMPORARY: Changed from >= 5 to >= 1 for testing victory screen
-        // TODO: Change back to >= 5 after testing
-        return this.currentWave >= 1 && this.isWaveComplete();
+        return this.currentWave >= 5 && this.isWaveComplete();
     }
 
     getEnemiesRemaining() {
