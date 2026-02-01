@@ -12,23 +12,23 @@ export class UIManager {
         this.staminaDisplay = null;
         this.buildButton = null;
         this.totemHealthBar = null;
-        
+
         // UI modules
         this.buildModeUI = null;
         this.menuUI = null;
         this.interactionUI = null;
         this.tutorialUI = null;
-        
+
         this.createUI();
         this.createTotemHealthBar();
-        
+
         // Initialize UI modules
         this.buildModeUI = new BuildModeUI(this.container);
         this.menuUI = new MenuUI();
         this.interactionUI = new InteractionUI(this.container);
         this.tutorialUI = new TutorialUI(this.container);
     }
-    
+
     createUI() {
         // Create UI container
         this.container = document.createElement('div');
@@ -43,7 +43,7 @@ export class UIManager {
             color: white;
             z-index: 1000;
         `;
-        
+
         // Resource display
         this.resourceDisplay = document.createElement('div');
         this.resourceDisplay.style.cssText = `
@@ -61,7 +61,7 @@ export class UIManager {
             <div id="wood-display" style="margin: 5px 0;">Wood: 0</div>
         `;
         this.container.appendChild(this.resourceDisplay);
-        
+
         // Stamina display
         this.staminaDisplay = document.createElement('div');
         this.staminaDisplay.style.cssText = `
@@ -79,7 +79,7 @@ export class UIManager {
             <div id="stamina-note" style="margin-top: 4px; font-size: 11px; color: #b9d7ff; display: none;">Stamina refreshes next day.</div>
         `;
         this.container.appendChild(this.staminaDisplay);
-        
+
         // Day display
         this.dayDisplay = document.createElement('div');
         this.dayDisplay.style.cssText = `
@@ -98,7 +98,7 @@ export class UIManager {
             <div id="wave-progress" style="margin: 5px 0; font-size: 12px; color: #aaa;">Enemies: <span id="enemies-killed">0</span>/<span id="enemies-total">0</span></div>
         `;
         this.container.appendChild(this.dayDisplay);
-        
+
         // End Day button
         this.endDayButton = document.createElement('button');
         this.endDayButton.textContent = 'End Day';
@@ -127,7 +127,7 @@ export class UIManager {
             this.endDayButton.style.transform = 'translateX(-50%) scale(1)';
         });
         this.container.appendChild(this.endDayButton);
-        
+
         // Build button
         this.buildButton = document.createElement('button');
         this.buildButton.textContent = 'Build';
@@ -155,10 +155,10 @@ export class UIManager {
             this.buildButton.style.transform = 'scale(1)';
         });
         this.container.appendChild(this.buildButton);
-        
+
         document.body.appendChild(this.container);
     }
-    
+
     createTotemHealthBar() {
         this.totemHealthBar = document.createElement('div');
         this.totemHealthBar.style.cssText = `
@@ -181,12 +181,12 @@ export class UIManager {
         `;
         this.container.appendChild(this.totemHealthBar);
     }
-    
+
     // Core UI updates
     updateResources(food, wood) {
         const foodDisplay = this.resourceDisplay.querySelector('#food-display');
         const woodDisplay = this.resourceDisplay.querySelector('#wood-display');
-        
+
         if (foodDisplay) {
             foodDisplay.textContent = `Food: ${food}`;
         }
@@ -194,11 +194,11 @@ export class UIManager {
             woodDisplay.textContent = `Wood: ${wood}`;
         }
     }
-    
+
     updateStamina(current, max) {
         const staminaDisplay = this.staminaDisplay.querySelector('#stamina-display');
         const staminaNote = this.staminaDisplay.querySelector('#stamina-note');
-        
+
         if (staminaDisplay) {
             staminaDisplay.textContent = `${current}/${max}`;
         }
@@ -206,11 +206,11 @@ export class UIManager {
             staminaNote.style.display = current <= 2 ? 'block' : 'none';
         }
     }
-    
+
     updateDayInfo(day, state) {
         const dayNumber = this.dayDisplay.querySelector('#day-number');
         const dayState = this.dayDisplay.querySelector('#day-state');
-        
+
         if (dayNumber) {
             dayNumber.textContent = day;
         }
@@ -218,14 +218,14 @@ export class UIManager {
             dayState.textContent = `State: ${state.charAt(0).toUpperCase() + state.slice(1)}`;
         }
     }
-    
+
     updateWaveInfo(waveNumber, enemiesKilled, enemiesTotal) {
         const waveNumberEl = this.dayDisplay.querySelector('#wave-number');
         const enemiesKilledEl = this.dayDisplay.querySelector('#enemies-killed');
         const enemiesTotalEl = this.dayDisplay.querySelector('#enemies-total');
         const waveInfoEl = this.dayDisplay.querySelector('#wave-info');
         const waveProgressEl = this.dayDisplay.querySelector('#wave-progress');
-        
+
         if (waveNumberEl) {
             if (waveNumber > 0) {
                 waveNumberEl.textContent = waveNumber;
@@ -236,7 +236,7 @@ export class UIManager {
                 if (waveProgressEl) waveProgressEl.style.display = 'none';
             }
         }
-        
+
         if (enemiesKilledEl) {
             enemiesKilledEl.textContent = enemiesKilled;
         }
@@ -244,17 +244,17 @@ export class UIManager {
             enemiesTotalEl.textContent = enemiesTotal;
         }
     }
-    
+
     updateTotemHealth(current, max) {
         if (!this.totemHealthBar) return;
-        
+
         const healthFill = this.totemHealthBar.querySelector('#totem-health-fill');
         const healthText = this.totemHealthBar.querySelector('#totem-health-text');
-        
+
         if (healthFill) {
             const percentage = Math.max(0, Math.min(100, (current / max) * 100));
             healthFill.style.width = `${percentage}%`;
-            
+
             if (percentage > 60) {
                 healthFill.style.background = 'linear-gradient(90deg, #4a7c59, #5a8c69)';
             } else if (percentage > 30) {
@@ -263,22 +263,22 @@ export class UIManager {
                 healthFill.style.background = 'linear-gradient(90deg, #ff4444, #cc0000)';
             }
         }
-        
+
         if (healthText) {
             healthText.textContent = `${Math.max(0, Math.round(current))}/${max}`;
         }
     }
-    
+
     setEndDayCallback(callback) {
         this.endDayButton.addEventListener('click', callback);
     }
-    
+
     setEndDayEnabled(enabled) {
         this.endDayButton.disabled = !enabled;
         this.endDayButton.style.opacity = enabled ? '1' : '0.5';
         this.endDayButton.style.cursor = enabled ? 'pointer' : 'not-allowed';
     }
-    
+
     setBuildButtonEnabled(enabled) {
         if (!this.buildButton) return;
         this.buildButton.disabled = !enabled;
@@ -286,54 +286,54 @@ export class UIManager {
         this.buildButton.style.cursor = enabled ? 'pointer' : 'not-allowed';
         this.buildButton.style.background = enabled ? '#6a5a4a' : '#4a4a4a';
     }
-    
+
     setBuildButtonCallback(callback) {
         if (this.buildButton) {
             this.buildButton.addEventListener('click', callback);
         }
     }
-    
+
     // Delegate to BuildModeUI
     setBuildModeActive(active) {
         if (this.buildModeUI) {
             this.buildModeUI.setBuildModeActive(active);
         }
     }
-    
+
     showBuildMenu(buildItems, canAffordCallback, onItemSelected, getDiscountInfo = null, getResourceInfo = null) {
         if (this.buildModeUI) {
             this.buildModeUI.showBuildMenu(buildItems, canAffordCallback, onItemSelected, getDiscountInfo, getResourceInfo);
         }
     }
-    
+
     hideBuildMenu() {
         if (this.buildModeUI) {
             this.buildModeUI.hideBuildMenu();
         }
     }
-    
+
     selectBuildMenuItem(index) {
         if (this.buildModeUI) {
             this.buildModeUI.selectBuildMenuItem(index);
         }
     }
-    
+
     get selectedBuildItemIndex() {
         return this.buildModeUI ? this.buildModeUI.selectedBuildItemIndex : -1;
     }
-    
+
     showBuildInstructions(inMenu) {
         if (this.buildModeUI) {
             this.buildModeUI.showBuildInstructions(inMenu);
         }
     }
-    
+
     hideBuildInstructions() {
         if (this.buildModeUI) {
             this.buildModeUI.hideBuildInstructions();
         }
     }
-    
+
     // Delegate to MenuUI
     showMainMenu(onStartGame) {
         if (this.menuUI) {
@@ -342,13 +342,13 @@ export class UIManager {
             });
         }
     }
-    
+
     hideMainMenu() {
         if (this.menuUI) {
             this.menuUI.hideMainMenu();
         }
     }
-    
+
     showPauseMenu(onResume, onRestart) {
         if (this.menuUI) {
             this.menuUI.showPauseMenu(onResume, onRestart, (onBack) => {
@@ -356,20 +356,20 @@ export class UIManager {
             });
         }
     }
-    
+
     hidePauseMenu() {
         if (this.menuUI) {
             this.menuUI.hidePauseMenu();
         }
     }
-    
+
     // Delegate to InteractionUI
     updateEnemyDirectionIndicators(enemies, camera, playerPosition) {
         if (this.interactionUI) {
             this.interactionUI.updateEnemyDirectionIndicators(enemies, camera, playerPosition);
         }
     }
-    
+
     updateTreeProgressBars(trees, camera) {
         if (this.interactionUI) {
             this.interactionUI.updateTreeProgressBars(trees, camera);
@@ -381,13 +381,13 @@ export class UIManager {
             this.interactionUI.updateEnemyHealthBars(enemies, camera);
         }
     }
-    
+
     hideTreeProgressBar(tree) {
         if (this.interactionUI) {
             this.interactionUI.hideTreeProgressBar(tree);
         }
     }
-    
+
     updateCatDenProgressBars(buildings, camera) {
         if (this.interactionUI) {
             this.interactionUI.updateCatDenProgressBars(buildings, camera);
@@ -405,38 +405,38 @@ export class UIManager {
             this.interactionUI.updateTotemProgressBar(totem, progress, camera, isInteracting);
         }
     }
-    
+
     showTooltip(target, config, camera) {
         if (this.interactionUI) {
             this.interactionUI.showTooltip(target, config, camera);
         }
     }
-    
+
     hideTooltip(target) {
         if (this.interactionUI) {
             this.interactionUI.hideTooltip(target);
         }
     }
-    
+
     updateTooltips(targets, camera) {
         if (this.interactionUI) {
             this.interactionUI.updateTooltips(targets, camera);
         }
     }
-    
+
     // Delegate to TutorialUI
     showTutorial() {
         if (this.tutorialUI) {
             this.tutorialUI.show();
         }
     }
-    
+
     hideTutorial() {
         if (this.tutorialUI) {
             this.tutorialUI.hide();
         }
     }
-    
+
     updateTutorialStep(stepData, progress) {
         if (this.tutorialUI) {
             this.tutorialUI.updateStep(stepData, progress);
@@ -460,20 +460,20 @@ export class UIManager {
             this.tutorialUI.updateFocusOverlay(points, options);
         }
     }
-    
+
     showTutorialPrompt(onYes, onNo) {
         if (this.tutorialUI) {
             this.tutorialUI.showPrompt(onYes, onNo);
         }
     }
-    
+
     // Win/Game Over screens
-    showWinScreen(screenshotDataURL = null, treesCutCount = 0, onBackToMenu = null) {
+    showWinScreen(screenshotDataURL = null, treesCutCount = 0, onBackToMenu = null, onStartEndlessMode = null) {
         const existingScreen = document.getElementById('win-screen');
         if (existingScreen) {
             existingScreen.remove();
         }
-        
+
         const winScreen = document.createElement('div');
         winScreen.id = 'win-screen';
         winScreen.style.cssText = `
@@ -493,31 +493,32 @@ export class UIManager {
             overflow-y: auto;
             padding: 20px;
         `;
-        
+
         const treesCutLine = this.getTreesCutLine(treesCutCount, true);
         let content = `
             <h1 style="font-size: 48px; margin-bottom: 20px; color: #ffd700; text-align: center;">The Tribe Prevails</h1>
             <p style="font-size: 24px; margin-bottom: 40px; text-align: center;">The cats held the line; the totem still glows.</p>
             <p style="font-size: 18px; color: #ccc; text-align: center; max-width: 700px; margin: 0 auto 20px; width: 100%;">${treesCutLine}</p>
         `;
-        
+
         if (screenshotDataURL) {
             content += `
                 <div style="margin: 20px auto; width: min(90vw, 60vh); aspect-ratio: 1 / 1; border: 3px solid #ffd700; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3);">
                     <img src="${screenshotDataURL}" style="width: 100%; height: 100%; object-fit: contain; display: block;" alt="Final Map Screenshot" />
                 </div>
-                <p style="font-size: 14px; color: #aaa; text-align: center; margin-top: 10px; margin-bottom: 20px;">Your final rainforest masterpiece</p>
+                <p style="font-size: 14px; color: #aaa; text-align: center; margin-top: 10px; margin-bottom: 5px;">Your final rainforest masterpiece</p>
+                <p style="font-size: 16px; color: #4a7c59; font-weight: bold; text-align: center; margin-bottom: 20px;">Endless mode has been unlocked!</p>
             `;
-            
+
             const downloadButton = document.createElement('button');
             downloadButton.textContent = 'Download Screenshot';
             downloadButton.style.cssText = `
                 padding: 12px 30px;
                 font-size: 16px;
                 font-weight: bold;
-                background: #4a7c59;
-                color: white;
-                border: 2px solid #228b22;
+                background: transparent;
+                color: #4a7c59;
+                border: 2px solid #4a7c59;
                 border-radius: 8px;
                 cursor: pointer;
                 margin: 10px auto;
@@ -525,11 +526,11 @@ export class UIManager {
                 transition: all 0.2s;
             `;
             downloadButton.addEventListener('mouseenter', () => {
-                downloadButton.style.background = '#5a8c69';
+                downloadButton.style.background = 'rgba(74, 124, 89, 0.1)';
                 downloadButton.style.transform = 'scale(1.05)';
             });
             downloadButton.addEventListener('mouseleave', () => {
-                downloadButton.style.background = '#4a7c59';
+                downloadButton.style.background = 'transparent';
                 downloadButton.style.transform = 'scale(1)';
             });
             downloadButton.addEventListener('click', () => {
@@ -538,7 +539,7 @@ export class UIManager {
                 link.href = screenshotDataURL;
                 link.click();
             });
-            
+
             const tempDiv = document.createElement('div');
             tempDiv.style.cssText = 'display: flex; flex-direction: column; align-items: center; width: 100%;';
             tempDiv.innerHTML = content;
@@ -548,8 +549,48 @@ export class UIManager {
             content += `<p style="font-size: 18px; color: #aaa; text-align: center;">The forest is safe from the mice.</p>`;
             winScreen.innerHTML = content;
         }
-        
-        // Add "Back to Menu" button
+
+        // Button Container
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.cssText = `
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        `;
+
+        // "Start Endless Mode" button
+        if (onStartEndlessMode) {
+            const endlessButton = document.createElement('button');
+            endlessButton.textContent = 'Start Endless Mode';
+            endlessButton.style.cssText = `
+                padding: 15px 40px;
+                font-size: 18px;
+                font-weight: bold;
+                background: #4a7c59;
+                color: white;
+                border: 2px solid #228b22;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.2s;
+            `;
+            endlessButton.addEventListener('mouseenter', () => {
+                endlessButton.style.background = '#5a8c69';
+                endlessButton.style.transform = 'scale(1.05)';
+            });
+            endlessButton.addEventListener('mouseleave', () => {
+                endlessButton.style.background = '#4a7c59';
+                endlessButton.style.transform = 'scale(1)';
+            });
+            endlessButton.addEventListener('click', () => {
+                this.hideWinScreen();
+                onStartEndlessMode();
+            });
+            buttonContainer.appendChild(endlessButton);
+        }
+
+        // "Back to Menu" button
         if (onBackToMenu) {
             const backToMenuButton = document.createElement('button');
             backToMenuButton.textContent = 'Back to Menu';
@@ -562,8 +603,6 @@ export class UIManager {
                 border: 2px solid #8b7355;
                 border-radius: 8px;
                 cursor: pointer;
-                margin: 20px auto;
-                display: block;
                 transition: all 0.2s;
             `;
             backToMenuButton.addEventListener('mouseenter', () => {
@@ -579,19 +618,20 @@ export class UIManager {
                     onBackToMenu();
                 }
             });
-            winScreen.appendChild(backToMenuButton);
+            buttonContainer.appendChild(backToMenuButton);
         }
-        
+
+        winScreen.appendChild(buttonContainer);
         document.body.appendChild(winScreen);
     }
-    
+
     hideWinScreen() {
         const winScreen = document.getElementById('win-screen');
         if (winScreen) {
             winScreen.remove();
         }
     }
-    
+
     showGameOverScreen(treesCutCount = 0) {
         const treesCutLine = this.getTreesCutLine(treesCutCount, false);
         const gameOverScreen = document.createElement('div');
@@ -612,7 +652,7 @@ export class UIManager {
             font-family: Arial, sans-serif;
             pointer-events: auto;
         `;
-        
+
         const restartButton = document.createElement('button');
         restartButton.textContent = 'Restart';
         restartButton.style.cssText = `
@@ -638,7 +678,7 @@ export class UIManager {
         restartButton.addEventListener('click', () => {
             window.location.reload();
         });
-        
+
         gameOverScreen.innerHTML = `
             <h1 style="font-size: 48px; margin-bottom: 20px; color: #ff4444;">The Totem Falls</h1>
             <p style="font-size: 24px; margin-bottom: 40px; text-align: center;">The tribe is scattered and the totem lies in ruin.</p>
@@ -654,24 +694,24 @@ export class UIManager {
             const treeLabel = treesCutCount === 1 ? 'tree' : 'trees';
             return `We defended the totem, and ${treesCutCount} ${treeLabel} paid the price. Could we have asked less of the woods?`;
         }
-        
+
         if (treesCutCount === 0) {
             return 'No trees were taken. Mercy to the woods... and a harder fate for the tribe.';
         }
-        
+
         const treeLabel = treesCutCount === 1 ? 'tree' : 'trees';
         return `${treesCutCount} ${treeLabel} fell in the cats' defense. The forest remembers, and still we lost.`;
     }
-    
+
     hideAllUI() {
         if (this.container) {
             this.container.style.display = 'none';
         }
-        
+
         if (this.buildModeUI) {
             this.buildModeUI.setBuildModeActive(false);
         }
-        
+
         if (this.interactionUI) {
             this.interactionUI.hideAll();
         }

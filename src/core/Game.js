@@ -42,11 +42,11 @@ export class Game {
         this.waveSystem = null;
         this.buildModeSystem = null;
         this.tutorialSystem = null;
-        
+
         // First building tracking for discounts
         this.firstCatDenBuilt = false;
         this.firstTowerBuilt = false;
-        
+
         // Tutorial tracking
         this.treesCutCount = 0;
         this.catsSpawnedCount = 0;
@@ -62,7 +62,7 @@ export class Game {
         this.tutorialFocusRadii = [];
         this.tutorialFocusActive = false;
         this.tutorialFocusOpacity = 0.6;
-        
+
         this.player = null;
         this.trees = [];
         this.forestTotem = null;
@@ -77,7 +77,7 @@ export class Game {
         this.totemInteractionProgress = 0.0;
         this.towerInteractionHoldLock = false;
         this.catDenInteractionHoldLock = false;
-        
+
         // Build mode entities
         this.ghostPreview = null;
         this.placementCursor = null;
@@ -85,16 +85,16 @@ export class Game {
         this.usingKeyboardPlacement = false;
         this.buildModeTogglePressed = false;
         this.awaitingPlacementConfirmRelease = false;
-        
+
         this.lastTime = 0;
         this.isRunning = false;
         this.lastSpawnTime = 0;
         this.gameTime = 0; // Total game time in seconds
         this.hasWon = false;
-        
+
         // Game mode: 'normal' or 'endless'
         this.gameMode = 'normal';
-        
+
         // Game state: 'menu', 'playing', 'paused'
         this.gameState = 'menu';
         this.pauseMenuTogglePressed = false;
@@ -110,10 +110,10 @@ export class Game {
         this.menuCameraBaseQuaternion = null;
         this.menuCameraPosition = new THREE.Vector3();
         this.menuCameraTarget = new THREE.Vector3();
-        
+
         this.init();
     }
-    
+
     init() {
         // Initialize core systems
         this.sceneManager = new SceneManager(this.container);
@@ -124,13 +124,13 @@ export class Game {
         this.daySystem = new DaySystem();
         this.buildModeSystem = new BuildModeSystem();
         this.uiManager = new UIManager();
-        
+
         // Initialize player at starting position
         const startPos = { x: -5, z: -5 };
         const startY = this.mapSystem.getHeightAt(startPos.x, startPos.z);
         this.player = new Player(startPos.x, startPos.z, startY);
         this.sceneManager.add(this.player.getMesh());
-        
+
         // Set up callback for when model loads
         this.player.onModelLoaded = () => {
             // Model has replaced placeholder, ensure it's in the scene
@@ -138,7 +138,7 @@ export class Game {
                 this.sceneManager.add(this.player.getMesh());
             }
         };
-        
+
         // Create Forest Totem at center
         const center = this.mapSystem.getCenter();
         const centerY = this.mapSystem.getHeightAt(center.x, center.z);
@@ -146,10 +146,10 @@ export class Game {
         this.sceneManager.add(this.forestTotem.getMesh());
         this.forestTotem.init();
         this.forestTotem.setFacingAngle(Math.PI);
-        
+
         // Generate trees
         this.generateTrees();
-        
+
         // Initialize pathfinding system (after trees are generated)
         const totemPos = this.forestTotem.getPosition();
         this.pathfindingSystem = new PathfindingSystem(
@@ -157,18 +157,18 @@ export class Game {
             totemPos,
             this.trees
         );
-        
+
         // Initialize enemy system
         this.enemySystem = new EnemySystem(this.mapSystem, this.sceneManager);
-        
+
         // Initialize wave system
         this.waveSystem = new WaveSystem();
         this.waveSystem.setGameMode(this.gameMode);
-        
+
         // Initialize tutorial system
         this.tutorialSystem = new TutorialSystem();
         this.setupTutorialSystem();
-        
+
         // Setup enemy system callbacks for wave tracking
         this.enemySystem.setOnEnemySpawned(() => {
             this.waveSystem.onEnemySpawned();
@@ -181,18 +181,18 @@ export class Game {
         this.enemySystem.setOnTotemDamaged(() => {
             this.playSfx('totem_hit');
         });
-        
+
         // Setup UI callbacks
         this.setupUICallbacks();
-        
+
         // Setup build mode callbacks
         this.setupBuildModeCallbacks();
-        
+
         // Setup resource system listeners
         this.resourceSystem.onResourceChange((resources) => {
             this.uiManager.updateResources(resources.food, resources.wood);
         });
-        
+
         // Setup day system listeners
         this.daySystem.onStateChange((dayInfo) => {
             this.uiManager.updateDayInfo(dayInfo.day, dayInfo.state);
@@ -200,10 +200,10 @@ export class Game {
             this.uiManager.setBuildButtonEnabled(dayInfo.state === DayState.DAY);
             // Update visual environment based on day/night state
             this.sceneManager.updateDayNightVisuals(dayInfo.state);
-            
+
             // Update stamina display when day changes (stamina refreshes on new day)
             this.uiManager.updateStamina(this.daySystem.getStamina(), this.daySystem.getMaxStamina());
-            
+
             // Start wave when night starts
             if (dayInfo.state === DayState.NIGHT) {
                 // Exit build mode when night starts
@@ -211,7 +211,7 @@ export class Game {
                     this.exitBuildMode();
                 }
                 this.startWave();
-                
+
                 // Tutorial step 5 completion is checked in updateTutorialUI
             }
 
@@ -228,10 +228,10 @@ export class Game {
 
             this.updateAudioState();
         });
-        
+
         // Set initial day visuals
         this.sceneManager.updateDayNightVisuals(DayState.DAY);
-        
+
         // Initial UI update
         this.uiManager.updateResources(0, 0);
         this.uiManager.updateDayInfo(1, DayState.DAY);
@@ -240,7 +240,7 @@ export class Game {
         this.uiManager.updateWaveInfo(0, 0, 0); // No wave during day
         this.uiManager.updateStamina(this.daySystem.getStamina(), this.daySystem.getMaxStamina());
     }
-    
+
     setupTutorialSystem() {
         // Set up completion checks for each tutorial step
         this.tutorialSystem.setStepCompletionCheck(0, () => {
@@ -250,27 +250,27 @@ export class Game {
             const closeEnough = distance <= (COMBAT_CONFIG.totemCollisionRadius * 3);
             return closeEnough || this.getTutorialStepElapsedMs() >= 8000;
         });
-        
+
         this.tutorialSystem.setStepCompletionCheck(1, () => {
             // Step 2: Gather resources
             return this.treesCutCount > 0;
         });
-        
+
         this.tutorialSystem.setStepCompletionCheck(2, () => {
             // Step 3: Build a cat den
             return this.firstCatDenBuilt;
         });
-        
+
         this.tutorialSystem.setStepCompletionCheck(3, () => {
             // Step 4: Spawn a cat
             return this.catsSpawnedCount > 0;
         });
-        
+
         this.tutorialSystem.setStepCompletionCheck(4, () => {
             // Step 5: Assign cat to tower
             return this.catsAssignedToTowerCount > 0;
         });
-        
+
         this.tutorialSystem.setStepCompletionCheck(5, () => {
             // Step 6: Go to night
             return this.daySystem.isNight() && this.daySystem.getCurrentDay() === 1;
@@ -281,7 +281,7 @@ export class Game {
             return this.waveSystem.getCurrentWave() === 1 && this.waveSystem.isWaveComplete();
         });
     }
-    
+
     startWave() {
         const currentDay = this.daySystem.getCurrentDay();
         const waveNumber = currentDay; // Each day = 1 wave
@@ -291,10 +291,10 @@ export class Game {
         const waveConfig = this.waveSystem.waveConfig;
 
         this.playSfx('wave_start');
-        
+
         // Update UI
         this.uiManager.updateWaveInfo(waveNumber, 0, waveConfig.enemyCount);
-        
+
         // Set lastSpawnTime so first enemy spawns after initial delay
         // For wave 5 (spawnInterval = 0), spawn immediately on first update tick
         if (waveNumber === 5) {
@@ -306,17 +306,17 @@ export class Game {
             this.lastSpawnTime = this.gameTime - (waveConfig.spawnInterval - WAVE_CONFIG.initialSpawnDelay);
         }
     }
-    
+
     generateTrees() {
         const mapSize = this.mapSystem.getMapSize();
         const boundary = this.mapSystem.getBoundary();
         const treeCount = MAP_CONFIG.treeCount;
         const minTreeDistance = COMBAT_CONFIG.treeCollisionRadius * 2;
         const maxAttemptsPerTree = 200;
-        
+
         // Avoid center area for totem (scaled proportionally)
         const centerRadius = MAP_CONFIG.centerRadius;
-        
+
         for (let i = 0; i < treeCount; i++) {
             let x, z;
             let placed = false;
@@ -342,7 +342,7 @@ export class Game {
                 console.warn(`Failed to place tree ${i + 1}/${treeCount} without collisions.`);
                 continue;
             }
-            
+
             const y = this.mapSystem.getHeightAt(x, z);
             const tree = new Tree(x, z, y);
             this.trees.push(tree);
@@ -366,7 +366,7 @@ export class Game {
         }
         return true;
     }
-    
+
     setupUICallbacks() {
         this.uiManager.setEndDayCallback(() => {
             if (this.daySystem.isDay()) {
@@ -375,31 +375,31 @@ export class Game {
             }
         });
     }
-    
+
     setupBuildModeCallbacks() {
         // Build button callback
         this.uiManager.setBuildButtonCallback(() => {
             this.toggleBuildMode();
         });
     }
-    
+
     toggleBuildMode() {
         // Can only enter build mode during day
         if (!this.daySystem.isDay() && !this.buildModeSystem.isActive()) {
             this.playSfx('build_error');
             return;
         }
-        
+
         const wasActive = this.buildModeSystem.isActive();
         this.buildModeSystem.toggleBuildMode();
-        
+
         if (this.buildModeSystem.isActive()) {
             this.enterBuildMode();
         } else {
             this.exitBuildMode();
         }
     }
-    
+
     enterBuildMode() {
         this.playSfx('build_open');
         // Show build menu
@@ -417,81 +417,81 @@ export class Game {
                 stamina: this.daySystem.getStamina()
             })
         );
-        
+
         // Set build mode active visuals
         this.uiManager.setBuildModeActive(true);
-        
+
         // Show build instructions
         this.uiManager.showBuildInstructions(this.buildModeSystem.isInMenu());
-        
+
         // Initialize placement cursor at player position
         const playerPos = this.player.getPosition();
         this.buildModeSystem.initializePlacementCursor(playerPos);
     }
-    
+
     exitBuildMode() {
         this.playSfx('build_close');
         // Hide build menu
         this.uiManager.hideBuildMenu();
-        
+
         // Hide build instructions
         this.uiManager.hideBuildInstructions();
-        
+
         // Remove build mode visuals
         this.uiManager.setBuildModeActive(false);
-        
+
         // Remove ghost preview and placement cursor
         if (this.ghostPreview) {
             this.sceneManager.remove(this.ghostPreview.getMesh());
             this.ghostPreview.remove();
             this.ghostPreview = null;
         }
-        
+
         if (this.placementCursor) {
             this.sceneManager.remove(this.placementCursor.getMesh());
             this.placementCursor.remove();
             this.placementCursor = null;
         }
-        
+
         // Hide totem influence visualization
         this.hideTotemInfluenceVisualization();
-        
+
         // Exit build mode system
         this.buildModeSystem.exitBuildMode();
         this.usingKeyboardPlacement = false;
         this.awaitingPlacementConfirmRelease = false;
     }
-    
+
     selectBuildItem(itemId) {
         if (this.buildModeSystem.selectBuildItem(itemId)) {
             this.playSfx('build_select');
             this.awaitingPlacementConfirmRelease = true;
             // Hide build menu
             this.uiManager.hideBuildMenu();
-            
+
             // Update instructions for placement mode
             this.uiManager.showBuildInstructions(false);
-            
+
             // Create ghost preview
             const buildItem = this.buildModeSystem.getSelectedBuildItem();
             if (buildItem) {
                 this.ghostPreview = new GhostPreview(buildItem);
                 this.sceneManager.add(this.ghostPreview.getMesh());
-                
+
                 // Show totem influence radius
                 this.showTotemInfluenceVisualization();
             }
         }
     }
-    
+
     showTotemInfluenceVisualization() {
         if (this.totemInfluenceVisualization) {
             this.hideTotemInfluenceVisualization();
         }
-        
+
         const totemPos = this.forestTotem.getPosition();
         const radius = this.buildModeSystem.getTotemInfluenceRadius();
-        
+
         // Create a ring geometry to show influence radius
         const ringGeometry = new THREE.RingGeometry(radius - 0.1, radius, 64);
         const ringMaterial = new THREE.MeshBasicMaterial({
@@ -503,7 +503,7 @@ export class Game {
         const ring = new THREE.Mesh(ringGeometry, ringMaterial);
         ring.rotation.x = -Math.PI / 2;
         ring.position.set(totemPos.x, 0.01, totemPos.z);
-        
+
         // Add a semi-transparent circle
         const circleGeometry = new THREE.CircleGeometry(radius, 64);
         const circleMaterial = new THREE.MeshBasicMaterial({
@@ -515,22 +515,22 @@ export class Game {
         const circle = new THREE.Mesh(circleGeometry, circleMaterial);
         circle.rotation.x = -Math.PI / 2;
         circle.position.set(totemPos.x, 0.01, totemPos.z);
-        
+
         const group = new THREE.Group();
         group.add(ring);
         group.add(circle);
-        
+
         this.totemInfluenceVisualization = group;
         this.sceneManager.add(group);
     }
-    
+
     hideTotemInfluenceVisualization() {
         if (this.totemInfluenceVisualization) {
             this.sceneManager.remove(this.totemInfluenceVisualization);
             this.totemInfluenceVisualization = null;
         }
     }
-    
+
     // Helper method to clean up placement visuals (reduces code duplication)
     cancelPlacementVisuals() {
         if (this.ghostPreview) {
@@ -774,21 +774,21 @@ export class Game {
 
         this.updateTutorialFocusOverlay();
     }
-    
+
     update(deltaTime) {
         // Don't update if game is over
         if (!this.isRunning || this.forestTotem.isDestroyed()) {
             this.inputManager.update();
             return;
         }
-        
+
         // Don't update game logic when in menu state
         if (this.gameState === 'menu') {
             this.updateMenuScene(deltaTime);
             this.inputManager.update();
             return;
         }
-        
+
         // Handle pause menu toggle (ESC key, but not in build mode)
         if (this.gameState === 'paused') {
             // ESC closes pause menu when paused
@@ -804,7 +804,7 @@ export class Game {
             this.inputManager.update();
             return;
         }
-        
+
         // Handle pause menu toggle when playing
         if (this.gameState === 'playing') {
             if (this.inputManager.isAnyKeyPressed(CONTROLS.exitBuildMode)) {
@@ -819,22 +819,22 @@ export class Game {
                 this.pauseMenuTogglePressed = false;
             }
         }
-        
+
         // Update game time
         this.gameTime += deltaTime;
-        
+
         // Update day/night visual transitions
         this.sceneManager.updateDayNightTransition(deltaTime, this.mapSystem);
-        
+
         // Update visual effects
         this.sceneManager.update(deltaTime);
 
         // Update totem animation (glow/flicker)
         this.forestTotem.update(deltaTime);
-        
+
         // Handle build mode
         this.handleBuildMode(deltaTime);
-        
+
         const enemies = this.enemySystem ? this.enemySystem.getEnemies() : [];
 
         // Update player (disable movement when in build mode placement)
@@ -846,13 +846,13 @@ export class Game {
                 enemies,
                 constructionSites: this.constructionSites
             });
-            
+
             // Handle player combat
             if (this.daySystem.isNight()) {
                 const mouseAttack = (this.inputManager.mouse.clicked || this.inputManager.mouse.down) &&
                     this.inputManager.mouse.button === 0;
                 const attackInput = mouseAttack ||
-                                   this.inputManager.isAnyKeyPressed(CONTROLS.attack);
+                    this.inputManager.isAnyKeyPressed(CONTROLS.attack);
                 if (attackInput) {
                     const result = this.player.attack(deltaTime, enemies);
                     const attackForward = typeof this.player.getAttackForward === 'function'
@@ -868,31 +868,31 @@ export class Game {
                         );
                         this.playSfx('player_attack');
                     }
-                    
+
                 }
             }
         }
-        
+
         // Update camera to follow player (pass mapSystem for boundary slowdown)
         // Don't update camera if we've won (camera is being positioned for screenshot)
         if (!this.hasWon) {
             this.sceneManager.updateCamera(this.player.getPosition(), this.mapSystem);
         }
-        
+
         // Handle tree cutting (continuous hold interaction)
         this.handleTreeCutting(deltaTime);
-        
+
         // Update tree progress bars
         const camera = this.sceneManager.camera;
         this.uiManager.updateTreeProgressBars(this.trees, camera);
         this.uiManager.updateEnemyHealthBars(enemies, camera);
-        
+
         // Update tree tooltips
         this.updateTreeTooltips(camera);
-        
+
         // Handle Cat Den interactions
         this.handleCatDenInteractions(deltaTime);
-        
+
         // Update Cat Den progress bars
         this.uiManager.updateCatDenProgressBars(this.buildings, camera);
 
@@ -904,22 +904,22 @@ export class Game {
             camera,
             this.isTotemInteracting
         );
-        
+
         // Handle Tower interactions
         this.handleTowerInteractions(deltaTime);
 
         // Update Tower progress bars
         this.uiManager.updateTowerProgressBars(this.towers, camera);
-        
+
         // Update Cat Den tooltips
         this.updateCatDenTooltips(camera);
-        
+
         // Update Totem tooltip
         this.updateTotemTooltips(camera);
-        
+
         // Update Tower tooltips
         this.updateTowerTooltips(camera);
-        
+
         // Update cats
         for (const cat of this.cats) {
             cat.update(deltaTime, {
@@ -938,23 +938,23 @@ export class Game {
                 building.update(deltaTime, this.gameTime);
             }
         }
-        
+
         // Update towers
         const totemPos = this.forestTotem.getPosition();
         for (const tower of this.towers) {
             tower.update(deltaTime, enemies, totemPos);
         }
-        
+
         // Update tree animations (wind and falling)
         for (const tree of this.trees) {
             // Update interaction progress for interacting trees
             if (tree.isInteracting) {
                 tree.updateInteraction(deltaTime);
             }
-            
+
             // Update tree animations (wind sway or falling)
             tree.update(deltaTime, this.gameTime);
-            
+
             // Check if tree just finished falling and should give resources
             if (tree.isCut && !tree.isFalling && !tree.resourcesGiven && tree.interactionProgress >= 1.0) {
                 // Tree has finished falling, give resources
@@ -971,7 +971,7 @@ export class Game {
                 this.sceneManager.createParticleEffect(tree.getPosition(), 'treeCut');
             }
         }
-        
+
         // Remove cut trees and mark trees as changed
         const treesBefore = this.trees.length;
         this.trees = this.trees.filter(tree => {
@@ -984,23 +984,23 @@ export class Game {
             }
             return true;
         });
-        
+
         // Update pathfinding if trees changed
         if (this.trees.length !== treesBefore || this.treesChanged) {
             const totemPos = this.forestTotem.getPosition();
             this.pathfindingSystem.update(this.trees, totemPos);
             this.treesChanged = false;
         }
-        
+
         // Update enemy system
         this.enemySystem.update(deltaTime, this.pathfindingSystem, this.forestTotem, this.trees, this.player);
-        
+
         // Update totem health bar
         this.uiManager.updateTotemHealth(
             this.forestTotem.getHealth(),
             this.forestTotem.getMaxHealth()
         );
-        
+
         // Update enemy direction indicators (red edges for off-screen enemies)
         if (this.daySystem.isNight()) {
             const enemies = this.enemySystem.getEnemies();
@@ -1011,19 +1011,19 @@ export class Game {
             // Hide all indicators during day
             this.uiManager.updateEnemyDirectionIndicators([], null, null);
         }
-        
+
         // Handle wave spawning and completion
         if (this.daySystem.isNight() && !this.hasWon) {
             const waveConfig = this.waveSystem.waveConfig;
-            
+
             if (waveConfig) {
                 // Spawn enemies based on wave config
                 const enemiesRemaining = waveConfig.enemyCount - this.waveSystem.enemiesSpawned;
-                
+
                 if (enemiesRemaining > 0) {
                     // Check if it's time to spawn next enemy
                     const timeSinceLastSpawn = this.gameTime - this.lastSpawnTime;
-                    
+
                     // For wave 5 (boss), spawn immediately on the first tick, then done
                     if (this.waveSystem.getCurrentWave() === 5) {
                         if (this.waveSystem.enemiesSpawned === 0) {
@@ -1038,7 +1038,7 @@ export class Game {
                         }
                     }
                 }
-                
+
                 // Update UI with wave progress
                 const progress = this.waveSystem.getWaveProgress();
                 this.uiManager.updateWaveInfo(
@@ -1046,25 +1046,25 @@ export class Game {
                     progress.killed,
                     progress.total
                 );
-                
+
                 // Check wave completion (all spawned, all killed, and no active enemies)
-                if (this.waveSystem.isWaveComplete() && 
+                if (this.waveSystem.isWaveComplete() &&
                     this.enemySystem.getEnemies().length === 0) {
                     this.completeWave();
                 }
             }
         }
-        
+
         // Update construction sites
         for (const site of this.constructionSites) {
             site.update(deltaTime);
-            
+
             if (site.isConstructionComplete()) {
                 // Create final building based on build item type
                 const sitePos = site.getPosition();
                 const buildItem = site.buildItem;
                 let building = null;
-                
+
                 if (buildItem.id === 'cat-den') {
                     building = new CatDen(sitePos.x, sitePos.z, sitePos.y);
                     // Track first cat den for tutorial and discount
@@ -1081,37 +1081,37 @@ export class Game {
                         this.firstTowerBuilt = true;
                     }
                 }
-                
+
                 if (building) {
                     building.build();
                     this.buildings.push(building);
                     this.sceneManager.add(building.getMesh());
                     building.init();
-                    
+
                     // Visual effect for building completion
                     this.sceneManager.createParticleEffect(sitePos, 'buildingComplete');
                     this.playSfx('build_complete');
                 }
-                
+
                 // Remove construction site
                 site.remove();
                 this.sceneManager.remove(site.getMesh());
             }
         }
-        
+
         // Remove completed construction sites
         this.constructionSites = this.constructionSites.filter(site => !site.isConstructionComplete());
-        
+
         // Check for game over (totem destroyed)
         if (this.forestTotem.isDestroyed()) {
             this.handleGameOver();
         }
-        
+
         // Exit build mode if stamina reaches zero
         if (this.buildModeSystem.isActive() && !this.daySystem.hasStamina()) {
             this.exitBuildMode();
         }
-        
+
         // Update tutorial UI
         if (this.tutorialSystem && this.tutorialSystem.isActive && !this.tutorialSystem.isTutorialComplete()) {
             this.updateTutorialUI();
@@ -1121,7 +1121,7 @@ export class Game {
         // Clear one-frame input flags after processing
         this.inputManager.update();
     }
-    
+
     handleBuildMode(deltaTime) {
         // Handle build mode toggle (allow entering even when inactive)
         if (this.inputManager.isAnyKeyPressed(CONTROLS.toggleBuildMode)) {
@@ -1137,7 +1137,7 @@ export class Game {
         if (!this.buildModeSystem.isActive()) {
             return;
         }
-        
+
         // Handle exit build mode
         if (this.inputManager.isAnyKeyPressed(CONTROLS.exitBuildMode)) {
             if (this.buildModeSystem.isActive()) {
@@ -1149,22 +1149,22 @@ export class Game {
                 this.exitBuildMode();
             }
         }
-        
+
         // Handle build mode menu state
         if (this.buildModeSystem.isInMenu()) {
             this.handleBuildMenuInput();
         }
-        
+
         // Handle placement state
         if (this.buildModeSystem.isInPlacement()) {
             this.handlePlacementMode(deltaTime);
         }
     }
-    
+
     handleBuildMenuInput() {
         const buildItems = this.buildModeSystem.getBuildItems();
         const itemIds = Object.keys(buildItems);
-        
+
         // Number key selection (1-9)
         const numberKeys = [
             CONTROLS.selectItem1, CONTROLS.selectItem2, CONTROLS.selectItem3,
@@ -1183,14 +1183,14 @@ export class Game {
                 return;
             }
         }
-        
+
         // Arrow key navigation (only in menu mode, not placement)
         let menuIndex = this.uiManager.selectedBuildItemIndex;
         if (menuIndex < 0) {
             menuIndex = 0;
             this.uiManager.selectBuildMenuItem(0);
         }
-        
+
         if (this.inputManager.isAnyKeyPressed(CONTROLS.menuUp)) {
             const newIndex = Math.max(0, menuIndex - 1);
             this.uiManager.selectBuildMenuItem(newIndex);
@@ -1212,30 +1212,30 @@ export class Game {
             }
         }
     }
-    
+
     handlePlacementMode(deltaTime) {
         // Update placement cursor for keyboard input
         this.buildModeSystem.updatePlacementCursor(this.inputManager);
-        
+
         // Determine placement position (mouse or keyboard)
         let placementX, placementZ;
         let placementY = 0;
         let usingKeyboard = false;
-        
+
         // Check if keyboard movement keys are pressed (indicates keyboard-only mode)
         usingKeyboard = this.inputManager.isMovementKeyPressed();
-        
+
         if (usingKeyboard) {
             this.usingKeyboardPlacement = true;
         }
-        
+
         if (this.usingKeyboardPlacement || usingKeyboard) {
             // Use placement cursor position
             const cursorPos = this.buildModeSystem.getPlacementCursorPosition();
             placementX = cursorPos.x;
             placementZ = cursorPos.z;
             placementY = this.mapSystem.getHeightAt(placementX, placementZ);
-            
+
             // Show placement cursor
             if (!this.placementCursor) {
                 this.placementCursor = new PlacementCursor();
@@ -1247,7 +1247,7 @@ export class Game {
             // Use mouse position (raycast to ground)
             const raycaster = this.sceneManager.getRaycaster();
             const intersects = raycaster.intersectObjects([this.mapSystem.ground]);
-            
+
             if (intersects.length > 0) {
                 const point = intersects[0].point;
                 placementX = point.x;
@@ -1260,21 +1260,21 @@ export class Game {
             } else {
                 return; // Can't place if mouse isn't over ground
             }
-            
+
             // Hide placement cursor when using mouse
             if (this.placementCursor) {
                 this.placementCursor.setVisible(false);
             }
         }
-        
+
         // Update ghost preview position
         if (this.ghostPreview) {
             this.ghostPreview.setPosition(placementX, placementZ, placementY);
-            
+
             // Get discount info for validation
             const buildItem = this.buildModeSystem.getSelectedBuildItem();
             const discountInfo = buildItem ? this.getDiscountInfo(buildItem.id) : null;
-            
+
             // Validate placement
             const validation = this.buildModeSystem.validatePlacement(
                 placementX, placementZ,
@@ -1282,7 +1282,7 @@ export class Game {
                 this.trees, this.buildings, this.forestTotem, this.mapSystem,
                 discountInfo
             );
-            
+
             this.ghostPreview.updateValidity(validation.valid);
             const camera = this.sceneManager.camera;
             if (!validation.valid && validation.reason === 'Outside totem influence radius') {
@@ -1303,13 +1303,13 @@ export class Game {
                 this.awaitingPlacementConfirmRelease = false;
             }
         }
-        
+
         // Handle placement confirmation
-        if (!this.awaitingPlacementConfirmRelease && (this.inputManager.isAnyKeyPressed(CONTROLS.confirmBuild) || 
+        if (!this.awaitingPlacementConfirmRelease && (this.inputManager.isAnyKeyPressed(CONTROLS.confirmBuild) ||
             (this.inputManager.mouse.clicked && this.inputManager.mouse.button === 0))) {
             this.confirmPlacement(placementX, placementZ, placementY);
         }
-        
+
         // Handle placement cancellation (right click returns to menu, Esc exits completely)
         if (this.inputManager.isAnyKeyPressed(CONTROLS.cancelBuild)) {
             this.buildModeSystem.cancelPlacement();
@@ -1319,14 +1319,14 @@ export class Game {
             this.enterBuildMode();
         }
     }
-    
+
     confirmPlacement(x, z, y = 0) {
         const buildItem = this.buildModeSystem.getSelectedBuildItem();
         if (!buildItem) return;
-        
+
         // Get discount info
         const discountInfo = this.getDiscountInfo(buildItem.id);
-        
+
         // Validate placement again (also validated in handlePlacementMode for visual feedback)
         // This ensures resources haven't changed and placement is still valid at confirmation time
         const validation = this.buildModeSystem.validatePlacement(
@@ -1335,34 +1335,34 @@ export class Game {
             this.trees, this.buildings, this.forestTotem, this.mapSystem,
             discountInfo
         );
-        
+
         if (!validation.valid) {
             this.playSfx('build_error');
             return; // Can't place here
         }
-        
+
         // Calculate costs with discount
         const costs = this.buildModeSystem.getBuildCosts(buildItem.id, discountInfo);
-        
+
         // Deduct resources
         this.resourceSystem.spendWood(costs.wood);
         this.daySystem.consumeStamina(costs.stamina);
         this.uiManager.updateStamina(this.daySystem.getStamina(), this.daySystem.getMaxStamina());
-        
+
         // Create construction site
         const constructionSite = new ConstructionSite(x, z, buildItem, y);
         this.constructionSites.push(constructionSite);
         this.sceneManager.add(constructionSite.getMesh());
 
         this.playSfx('build_place');
-        
+
         // Remove placement visuals
         this.cancelPlacementVisuals();
-        
+
         // Exit build mode after placing building
         this.exitBuildMode();
     }
-    
+
     updateTreeTooltips(camera) {
         if (!this.daySystem.isDay()) {
             // Hide all tooltips at night
@@ -1371,20 +1371,20 @@ export class Game {
             }
             return;
         }
-        
+
         const tooltipTargets = [];
-        
+
         for (const tree of this.trees) {
             // Check if tree is eligible for tooltip
-            const isEligible = !tree.isCut && 
-                              !tree.isFalling && 
-                              !tree.isInteracting &&
-                              this.player.canInteractWith(tree);
-            
+            const isEligible = !tree.isCut &&
+                !tree.isFalling &&
+                !tree.isInteracting &&
+                this.player.canInteractWith(tree);
+
             if (isEligible) {
                 // Check if player has enough stamina
                 const hasStamina = this.daySystem.hasStamina();
-                
+
                 tooltipTargets.push({
                     target: tree,
                     config: {
@@ -1400,13 +1400,13 @@ export class Game {
                 this.uiManager.hideTooltip(tree);
             }
         }
-        
+
         // Update tooltips for eligible trees
         for (const target of tooltipTargets) {
             this.uiManager.showTooltip(target.target, target.config, camera);
         }
     }
-    
+
     handleTreeCutting(deltaTime) {
         if (this.buildModeSystem.isActive()) {
             for (const tree of this.trees) {
@@ -1420,14 +1420,14 @@ export class Game {
         if (!this.daySystem.isDay()) {
             return; // Can't cut trees at night
         }
-        
+
         // Check if interact key is being held
         const spaceHeld = this.inputManager.isAnyKeyHeld(CONTROLS.interact);
-        
+
         // Find nearest tree within range
         let nearestTree = null;
         let nearestDistance = Infinity;
-        
+
         for (const tree of this.trees) {
             if (!tree.isCut && !tree.isFalling && this.player.canInteractWith(tree)) {
                 const distance = this.player.getPosition().distanceTo(tree.getPosition());
@@ -1437,14 +1437,14 @@ export class Game {
                 }
             }
         }
-        
+
         // Stop interactions for trees that are no longer in range
         for (const tree of this.trees) {
             if (tree.isInteracting && tree !== nearestTree) {
                 tree.stopInteraction();
             }
         }
-        
+
         if (nearestTree) {
             if (spaceHeld) {
                 // Check if interaction is complete (progress reached 1.0) BEFORE starting new interaction
@@ -1481,7 +1481,7 @@ export class Game {
             }
         }
     }
-    
+
     handleCatDenInteractions(deltaTime) {
         if (this.buildModeSystem.isActive()) {
             this.catDenInteractionHoldLock = false;
@@ -1496,17 +1496,17 @@ export class Game {
         if (!this.daySystem.isDay()) {
             return; // Can only interact during day
         }
-        
+
         // Check if space is being held (same as tree cutting)
         const spaceHeld = this.inputManager.isKeyHeld(' ');
         if (!spaceHeld) {
             this.catDenInteractionHoldLock = false;
         }
-        
+
         // Find nearest Cat Den within range
         let nearestCatDen = null;
         let nearestDistance = Infinity;
-        
+
         for (const building of this.buildings) {
             if (building instanceof CatDen && building.getIsBuilt()) {
                 if (building.canInteract(this.player.getPosition(), this.daySystem)) {
@@ -1518,14 +1518,14 @@ export class Game {
                 }
             }
         }
-        
+
         // Stop interactions for Cat Dens that are no longer in range
         for (const building of this.buildings) {
             if (building instanceof CatDen && building.isInteracting && building !== nearestCatDen) {
                 building.stopInteraction();
             }
         }
-        
+
         if (nearestCatDen) {
             const canSpawnCat = typeof nearestCatDen.canSpawnCat !== 'function' || nearestCatDen.canSpawnCat();
 
@@ -1538,19 +1538,19 @@ export class Game {
                 if (nearestCatDen.interactionProgress >= 1.0) {
                     // Spawn cat and consume resources
                     const spawnCost = nearestCatDen.getSpawnCost();
-                    if (this.resourceSystem.canAffordFood(spawnCost.food) && 
-                        this.daySystem.hasStamina() && 
+                    if (this.resourceSystem.canAffordFood(spawnCost.food) &&
+                        this.daySystem.hasStamina() &&
                         this.daySystem.getStamina() >= spawnCost.stamina &&
                         canSpawnCat) {
                         // Deduct resources
                         this.resourceSystem.spendFood(spawnCost.food);
                         this.daySystem.consumeStamina(spawnCost.stamina);
                         this.uiManager.updateStamina(this.daySystem.getStamina(), this.daySystem.getMaxStamina());
-                        
+
                         // Spawn cat
                         this.spawnCatFromDen(nearestCatDen);
                         this.catDenInteractionHoldLock = true;
-                        
+
                         // Reset interaction progress
                         nearestCatDen.stopInteraction();
                     } else {
@@ -1560,8 +1560,8 @@ export class Game {
                 } else if (!nearestCatDen.isInteracting && nearestCatDen.interactionProgress < 1.0) {
                     // Start interaction only if resources are available AND not already interacting AND progress hasn't reached 1.0
                     const spawnCost = nearestCatDen.getSpawnCost();
-                    if (this.resourceSystem.canAffordFood(spawnCost.food) && 
-                        this.daySystem.hasStamina() && 
+                    if (this.resourceSystem.canAffordFood(spawnCost.food) &&
+                        this.daySystem.hasStamina() &&
                         this.daySystem.getStamina() >= spawnCost.stamina &&
                         canSpawnCat) {
                         nearestCatDen.startInteraction();
@@ -1581,7 +1581,7 @@ export class Game {
                 }
             }
         }
-        
+
         // Update interaction progress for interacting Cat Dens
         for (const building of this.buildings) {
             if (building instanceof CatDen && building.isInteracting) {
@@ -1633,7 +1633,7 @@ export class Game {
             this.totemInteractionProgress = 0.0;
         }
     }
-    
+
     spawnCatFromDen(catDen) {
         if (catDen && typeof catDen.canSpawnCat === 'function' && !catDen.canSpawnCat()) {
             return;
@@ -1643,7 +1643,7 @@ export class Game {
         const playerMaskColor = this.player.getMaskColor();
         const cat = new Cat(denPos.x, denPos.z, playerMaskColor, denPos.y);
         cat.onGuardAttack = () => this.playSfx('cat_attack');
-        
+
         // Calculate idle position near Forest Totem
         const totemPos = this.forestTotem.getPosition();
         const angle = Math.random() * Math.PI * 2;
@@ -1652,24 +1652,24 @@ export class Game {
         const idleZ = totemPos.z + Math.sin(angle) * radius;
         const idleY = this.mapSystem.getHeightAt(idleX, idleZ);
         const idlePosition = new THREE.Vector3(idleX, idleY, idleZ);
-        
+
         cat.setIdlePosition(idlePosition);
         this.cats.push(cat);
         this.sceneManager.add(cat.getMesh());
         cat.init();
-        
+
         // Track for tutorial
         this.catsSpawnedCount++;
 
         if (catDen && typeof catDen.registerSpawnedCat === 'function') {
             catDen.registerSpawnedCat();
         }
-        
+
         // Visual effect for cat spawn
         this.sceneManager.createParticleEffect(denPos, 'catSpawn');
         this.playSfx('cat_spawn');
     }
-    
+
     updateCatDenTooltips(camera) {
         if (!this.daySystem.isDay()) {
             // Hide all tooltips at night
@@ -1680,25 +1680,25 @@ export class Game {
             }
             return;
         }
-        
+
         const tooltipTargets = [];
-        
+
         for (const building of this.buildings) {
             if (building instanceof CatDen && building.getIsBuilt()) {
                 const canInteract = building.canInteract(this.player.getPosition(), this.daySystem);
-                
+
                 if (canInteract) {
                     const spawnCost = building.getSpawnCost();
                     const hasFood = this.resourceSystem.canAffordFood(spawnCost.food);
-                    const hasStamina = this.daySystem.hasStamina() && 
-                                      this.daySystem.getStamina() >= spawnCost.stamina;
+                    const hasStamina = this.daySystem.hasStamina() &&
+                        this.daySystem.getStamina() >= spawnCost.stamina;
                     const hasCapacity = typeof building.canSpawnCat !== 'function' || building.canSpawnCat();
                     const hasResources = hasFood && hasStamina && hasCapacity;
                     const catCount = typeof building.getCatCount === 'function' ? building.getCatCount() : null;
                     const maxCats = typeof building.getMaxCats === 'function' ? building.getMaxCats() : null;
                     const countText = catCount !== null && maxCats !== null ? ` (${catCount}/${maxCats})` : '';
                     const title = hasCapacity ? `Spawn Cat${countText}` : `Den Full${countText}`;
-                    
+
                     tooltipTargets.push({
                         target: building,
                         config: {
@@ -1717,13 +1717,13 @@ export class Game {
                 }
             }
         }
-        
+
         // Update tooltips for eligible Cat Dens
         for (const target of tooltipTargets) {
             this.uiManager.showTooltip(target.target, target.config, camera);
         }
     }
-    
+
     handleTowerInteractions(deltaTime) {
         if (this.buildModeSystem.isActive()) {
             this.towerInteractionHoldLock = false;
@@ -1807,7 +1807,7 @@ export class Game {
             }
         }
     }
-    
+
     assignCatToTower(tower) {
         // If tower already has a cat, unassign it first
         if (tower.assignedCat) {
@@ -1815,11 +1815,11 @@ export class Game {
             this.playSfx('tower_unassign');
             return;
         }
-        
+
         // Find nearest available cat
         let nearestCat = null;
         let nearestDistance = Infinity;
-        
+
         for (const cat of this.cats) {
             if (cat.isAvailable()) {
                 const distance = cat.getPosition().distanceTo(tower.getPosition());
@@ -1829,7 +1829,7 @@ export class Game {
                 }
             }
         }
-        
+
         if (nearestCat) {
             tower.assignCat(nearestCat);
             this.playSfx('tower_assign');
@@ -1837,7 +1837,7 @@ export class Game {
             this.catsAssignedToTowerCount++;
         }
     }
-    
+
     updateTowerTooltips(camera) {
         if (!this.daySystem.isDay()) {
             // Hide all tooltips at night
@@ -1846,24 +1846,24 @@ export class Game {
             }
             return;
         }
-        
+
         const tooltipTargets = [];
-        
+
         for (const tower of this.towers) {
             if (tower.getIsBuilt()) {
                 const canInteract = tower.canInteract(this.player.getPosition(), this.daySystem);
-                
+
                 if (canInteract) {
                     const hasAvailableCat = this.cats.some(cat => cat.isAvailable());
                     const hasAssignedCat = tower.assignedCat !== null;
-                    
+
                     let title = 'Assign Cat';
                     if (hasAssignedCat) {
                         title = 'Unassign Cat';
                     } else if (!hasAvailableCat) {
                         title = 'No Cats Available';
                     }
-                    
+
                     tooltipTargets.push({
                         target: tower,
                         config: {
@@ -1878,7 +1878,7 @@ export class Game {
                 }
             }
         }
-        
+
         // Update tooltips for eligible Towers
         for (const target of tooltipTargets) {
             this.uiManager.showTooltip(target.target, target.config, camera);
@@ -1905,10 +1905,10 @@ export class Game {
             this.uiManager.hideTooltip(this.forestTotem);
         }
     }
-    
+
     completeWave() {
         const waveNumber = this.waveSystem.getCurrentWave();
-        
+
         // Check for win condition (only in normal mode)
         if (this.gameMode === 'normal' && this.waveSystem.hasWon()) {
             this.playSfx('game_win');
@@ -1929,32 +1929,55 @@ export class Game {
         // Move to next day (which will start next wave)
         this.daySystem.startNextDay();
     }
-    
+
     handleWin() {
         this.hasWon = true;
-        
+
         // Save win state to localStorage
         try {
             localStorage.setItem('catsOfTheRainforest_hasWon', 'true');
         } catch (e) {
             console.warn('Failed to save win state to localStorage:', e);
         }
-        
+
         // Hide all UI elements
         this.uiManager.hideAllUI();
-        
+
         // Frame map and capture screenshot
         this.sceneManager.frameMapForScreenshot(this.mapSystem, () => {
             // Capture screenshot after camera transition
             const screenshotDataURL = this.sceneManager.captureScreenshot();
-            
+
             // Show win screen with screenshot
             this.uiManager.showWinScreen(screenshotDataURL, this.treesCutCount, () => {
                 this.returnToMenu();
+            }, () => {
+                this.startEndlessMode();
             });
         });
     }
-    
+
+    startEndlessMode() {
+        console.log("Starting Endless Mode...");
+
+        // set game mode to endless
+        this.gameMode = 'endless';
+        this.waveSystem.setGameMode('endless');
+        this.hasWon = false; // Reset win state so game continues
+
+        // Restore camera
+        this.sceneManager.restoreCamera();
+
+        // Show UI again
+        this.uiManager.showAllUI();
+
+        // Resume game flow
+        this.daySystem.startNextDay();
+
+        // Play success sound to indicate mode change
+        this.playSfx('totem_activate');
+    }
+
     hasWonBefore() {
         try {
             return localStorage.getItem('catsOfTheRainforest_hasWon') === 'true';
@@ -1963,35 +1986,35 @@ export class Game {
             return false;
         }
     }
-    
+
     handleGameOver() {
         this.isRunning = false;
         this.playSfx('game_over');
-        
+
         // Freeze all entities - stop all updates
         // The update loop will stop because isRunning is false
-        
+
         // Show game over screen
         this.uiManager.showGameOverScreen(this.treesCutCount);
     }
-    
+
     render() {
         this.sceneManager.render();
     }
-    
+
     gameLoop(currentTime) {
         if (!this.isRunning) return;
-        
+
         const deltaTime = Math.min((currentTime - this.lastTime) / 1000, 0.1);
         this.lastTime = currentTime;
-        
+
         // Always render (so pause menu is visible), but only update when not paused
         this.update(deltaTime);
         this.render();
-        
+
         requestAnimationFrame((time) => this.gameLoop(time));
     }
-    
+
     start() {
         // Show main menu instead of starting game immediately
         this.gameState = 'menu';
@@ -2011,7 +2034,7 @@ export class Game {
         // Start game loop for rendering (updates are skipped when in menu state)
         this.gameLoop(this.lastTime);
     }
-    
+
     startGame(gameMode = 'normal') {
         this.gameMode = gameMode;
         this.waveSystem.setGameMode(gameMode);
@@ -2019,7 +2042,7 @@ export class Game {
         this.cleanupMenuScene();
         this.uiManager.hideMainMenu();
         this.uiManager.showAllUI();
-        
+
         // Show tutorial prompt
         this.uiManager.showTutorialPrompt(
             () => {
@@ -2040,13 +2063,13 @@ export class Game {
             }
         );
     }
-    
+
     updateTutorialUI() {
         if (this.tutorialSystem.isActive && !this.tutorialSystem.isTutorialComplete()) {
             const currentStep = this.tutorialSystem.getCurrentStep();
             const progress = this.tutorialSystem.getProgress();
             const stepIndex = this.tutorialSystem.getCurrentStepIndex();
-            
+
             if (currentStep) {
                 if (stepIndex !== this.lastTutorialStepIndex) {
                     this.lastTutorialStepIndex = stepIndex;
@@ -2056,11 +2079,11 @@ export class Game {
                 }
 
                 this.uiManager.updateTutorialStep(currentStep, progress);
-                
+
                 // Check if current step is complete
                 if (this.tutorialSystem.checkStepCompletion()) {
                     this.tutorialSystem.advanceStep();
-                    
+
                     if (this.tutorialSystem.isTutorialComplete()) {
                         this.uiManager.hideTutorial();
                         this.clearTutorialHighlights();
@@ -2072,7 +2095,7 @@ export class Game {
             }
         }
     }
-    
+
     getDiscountInfo(itemId) {
         if (itemId === 'cat-den' && !this.firstCatDenBuilt) {
             return {
@@ -2103,7 +2126,7 @@ export class Game {
 
         this.uiManager.updateTotemHealth(this.forestTotem.getHealth(), maxHealth);
     }
-    
+
     pauseGame() {
         if (this.gameState === 'playing') {
             this.gameState = 'paused';
@@ -2115,7 +2138,7 @@ export class Game {
             );
         }
     }
-    
+
     resumeGame() {
         if (this.gameState === 'paused') {
             this.gameState = 'playing';
@@ -2124,17 +2147,17 @@ export class Game {
             this.uiManager.hidePauseMenu();
         }
     }
-    
+
     restartGame() {
         this.stop();
         window.location.reload();
     }
-    
+
     returnToMenu() {
         // Reload page to return to menu (cleanest approach)
         window.location.reload();
     }
-    
+
     stop() {
         this.isRunning = false;
         if (this.audioManager) {
