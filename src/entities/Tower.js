@@ -34,6 +34,7 @@ export class Tower extends BaseModel {
         this.lastAttackTime = 0;
         this.targetEnemy = null;
         this.projectiles = [];
+        this.onFire = null;
 
         // Vine animation
         this.vineMeshes = [];
@@ -269,6 +270,10 @@ export class Tower extends BaseModel {
             speed: this.projectileSpeed,
             damage: this.attackDamage
         });
+
+        if (this.onFire) {
+            this.onFire(this, target);
+        }
     }
 
     getProjectileOrigin() {

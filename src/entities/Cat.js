@@ -24,6 +24,7 @@ export class Cat extends BaseModel {
         this.lastDayState = null;
         this.wanderTimer = 0;
         this.guardCooldownTimer = 0;
+        this.onGuardAttack = null;
         
         // Animation properties (similar to PlayerModel)
         this.animationTime = 0;
@@ -517,6 +518,9 @@ export class Cat extends BaseModel {
                 }
                 
                 if (closestEnemy && typeof closestEnemy.takeDamage === 'function') {
+                    if (this.onGuardAttack) {
+                        this.onGuardAttack(this, closestEnemy);
+                    }
                     closestEnemy.takeDamage(CAT_CONFIG.guardDamage);
                     this.guardCooldownTimer = CAT_CONFIG.guardCooldown;
                 }

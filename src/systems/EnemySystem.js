@@ -11,6 +11,7 @@ export class EnemySystem {
         this.boundary = mapSystem.getBoundary();
         this.onEnemySpawnedCallback = null;
         this.onEnemyKilledCallback = null;
+        this.onTotemDamagedCallback = null;
     }
     
     setOnEnemySpawned(callback) {
@@ -19,6 +20,10 @@ export class EnemySystem {
     
     setOnEnemyKilled(callback) {
         this.onEnemyKilledCallback = callback;
+    }
+
+    setOnTotemDamaged(callback) {
+        this.onTotemDamagedCallback = callback;
     }
 
     spawnMouse(side, trees = [], enemyType = 'regular', hpMultiplier = 1.0) {
@@ -199,6 +204,9 @@ export class EnemySystem {
             if (attackedTotem) {
                 // Mouse is attacking totem - deal damage continuously
                 const totemDestroyed = totem.takeDamage(mouse.getDamageAmount());
+                if (this.onTotemDamagedCallback) {
+                    this.onTotemDamagedCallback(mouse);
+                }
                 // Don't destroy enemy immediately - let it attack continuously
                 // Enemy will be destroyed when totem is destroyed or enemy is killed
                 if (totemDestroyed) {

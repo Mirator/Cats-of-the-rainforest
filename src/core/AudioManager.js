@@ -13,6 +13,10 @@ export class AudioManager {
         this.fadeRequestId = null;
         this.fadeToken = 0;
         this.musicRequestId = 0;
+        this.audioContext = null;
+        this.sfxMasterGain = null;
+        this.noiseBuffer = null;
+        this.sfxCooldowns = new Map();
 
         this.pendingMusicKey = null;
         this.pendingMusicOptions = null;
@@ -27,6 +31,43 @@ export class AudioManager {
     normalizeVolume(value, fallback) {
         const volume = typeof value === 'number' ? value : fallback;
         return Math.min(1, Math.max(0, volume));
+    }
+
+    getSfxContext() {
+        if (this.audioContext) {
+            return this.audioContext;
+        }
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) {
+            return null;
+        }
+        this.audioContext = new AudioContextClass();
+        this.sfxMasterGain = this.audioContext.createGain();
+        this.applySfxMasterVolume();
+        this.sfxMasterGain.connect(this.audioContext.destination);
+        return this.audioContext;
+    }
+
+    applySfxMasterVolume() {
+        if (!this.sfxMasterGain) return;
+        const volume = this.normalizeVolume(this.sfxVolume * this.masterVolume, 1);
+        this.sfxMasterGain.gain.value = volume;
+    }
+
+    getNoiseBuffer() {
+        const context = this.getSfxContext();
+        if (!context) return null;
+        if (this.noiseBuffer && this.noiseBuffer.sampleRate === context.sampleRate) {
+            return this.noiseBuffer;
+        }
+        const length = Math.floor(context.sampleRate);
+        const buffer = context.createBuffer(1, length, context.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < length; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+        this.noiseBuffer = buffer;
+        return buffer;
     }
 
     getBaseUrl() {
@@ -53,7 +94,8 @@ export class AudioManager {
     }
 
     resolveSfxUrl(key) {
-        const path = this.config?.sfx?.[key];
+        const entry = this.config?.sfx?.[key];
+        const path = typeof entry === 'string' ? entry : entry?.path;
         return path ? this.resolvePath(path) : null;
     }
 
@@ -68,6 +110,9 @@ export class AudioManager {
         this.isUnlocked = true;
         window.removeEventListener('pointerdown', this.boundUnlockHandler);
         window.removeEventListener('keydown', this.boundUnlockHandler);
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
         this.resumePendingPlayback();
     }
 
@@ -119,6 +164,83 @@ export class AudioManager {
             onStarted();
         }
         return playPromise;
+    }
+
+    playSynthSfx(config, { volume = 1 } = {}) {
+        const context = this.getSfxContext();
+        if (!context) return;
+        if (context.state === 'suspended') {
+            context.resume();
+        }
+
+        const now = context.currentTime;
+        const attack = Math.max(0, config.attack ?? 0.005);
+        const release = Math.max(0.01, config.release ?? 0.05);
+        const duration = Math.max(0.03, config.duration ?? 0.1);
+        const sustain = Math.max(0, duration - attack - release);
+        const endTime = now + attack + sustain + release;
+
+        const gainNode = context.createGain();
+        const baseVolume = this.normalizeVolume((config.volume ?? 1) * volume, 1);
+        gainNode.gain.setValueAtTime(0.0001, now);
+        gainNode.gain.linearRampToValueAtTime(baseVolume, now + attack);
+        gainNode.gain.setValueAtTime(baseVolume, now + attack + sustain);
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, endTime);
+
+        let outputNode = gainNode;
+        const panValue = typeof config.pan === 'number' ? Math.max(-1, Math.min(1, config.pan)) : null;
+        if (panValue !== null && typeof context.createStereoPanner === 'function') {
+            const panNode = context.createStereoPanner();
+            panNode.pan.value = panValue;
+            gainNode.connect(panNode);
+            outputNode = panNode;
+        }
+
+        if (this.sfxMasterGain) {
+            outputNode.connect(this.sfxMasterGain);
+        } else {
+            outputNode.connect(context.destination);
+        }
+
+        if (config.type === 'noise') {
+            const buffer = this.getNoiseBuffer();
+            if (!buffer) return;
+            const source = context.createBufferSource();
+            source.buffer = buffer;
+            source.loop = true;
+
+            let node = source;
+            if (config.filter) {
+                const filter = context.createBiquadFilter();
+                filter.type = config.filter.type || 'lowpass';
+                filter.frequency.value = config.filter.frequency ?? 800;
+                filter.Q.value = config.filter.Q ?? 0.7;
+                source.connect(filter);
+                node = filter;
+            }
+
+            node.connect(gainNode);
+            source.start(now);
+            source.stop(endTime);
+            return;
+        }
+
+        const wave = config.wave || 'sine';
+        const frequencies = Array.isArray(config.freq) ? config.freq : [config.freq ?? 440];
+        const freqEnds = Array.isArray(config.freqEnd) ? config.freqEnd : null;
+
+        frequencies.forEach((freq, index) => {
+            const osc = context.createOscillator();
+            osc.type = wave;
+            osc.frequency.setValueAtTime(freq, now);
+            const endFreq = freqEnds ? (freqEnds[index] ?? freq) : (config.freqEnd ?? freq);
+            if (endFreq !== freq) {
+                osc.frequency.linearRampToValueAtTime(endFreq, endTime);
+            }
+            osc.connect(gainNode);
+            osc.start(now);
+            osc.stop(endTime);
+        });
     }
 
     stopFade() {
@@ -245,24 +367,53 @@ export class AudioManager {
         this.pendingMusicOptions = null;
     }
 
-    playSfx(key, { volume = 1 } = {}) {
-        const url = this.resolveSfxUrl(key);
-        if (!url) {
+    playSfx(key, { volume = 1, cooldownMs } = {}) {
+        const config = this.config?.sfx?.[key];
+        if (!config) {
             console.warn(`AudioManager: missing sfx key "${key}"`);
             return;
         }
 
-        const audio = new Audio(url);
-        this.applySfxVolume(audio, this.normalizeVolume(volume, 1));
-        this.tryPlay(audio, {
-            onBlocked: () => {
-                this.pendingSfx.push({ key, options: { volume } });
+        const now = performance.now();
+        const cooldown = typeof cooldownMs === 'number' ? cooldownMs : (config.cooldownMs ?? 0);
+        if (cooldown > 0) {
+            const lastPlayed = this.sfxCooldowns.get(key) ?? 0;
+            if (now - lastPlayed < cooldown) {
+                return;
             }
-        });
+        }
 
-        audio.addEventListener('ended', () => {
-            audio.src = '';
-        });
+        if (!this.isUnlocked) {
+            this.pendingSfx.push({ key, options: { volume, cooldownMs } });
+            this.ensureUnlockListener();
+            return;
+        }
+
+        this.sfxCooldowns.set(key, now);
+
+        if (typeof config === 'string' || config.path) {
+            const url = this.resolveSfxUrl(key);
+            if (!url) {
+                console.warn(`AudioManager: missing sfx key "${key}"`);
+                return;
+            }
+
+            const audio = new Audio(url);
+            const gain = this.normalizeVolume(volume * (config.volume ?? 1), 1);
+            this.applySfxVolume(audio, gain);
+            this.tryPlay(audio, {
+                onBlocked: () => {
+                    this.pendingSfx.push({ key, options: { volume, cooldownMs } });
+                }
+            });
+
+            audio.addEventListener('ended', () => {
+                audio.src = '';
+            });
+            return;
+        }
+
+        this.playSynthSfx(config, { volume });
     }
 
     stopAll() {
@@ -273,6 +424,7 @@ export class AudioManager {
     setMasterVolume(volume) {
         this.masterVolume = this.normalizeVolume(volume, this.masterVolume);
         this.applyMusicVolume();
+        this.applySfxMasterVolume();
     }
 
     setMusicVolume(volume) {
@@ -282,5 +434,6 @@ export class AudioManager {
 
     setSfxVolume(volume) {
         this.sfxVolume = this.normalizeVolume(volume, this.sfxVolume);
+        this.applySfxMasterVolume();
     }
 }

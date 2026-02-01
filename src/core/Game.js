@@ -83,6 +83,18 @@ export class Game {
         // Game state: 'menu', 'playing', 'paused'
         this.gameState = 'menu';
         this.pauseMenuTogglePressed = false;
+
+        // Menu showcase (totem + cats)
+        this.menuCats = [];
+        this.menuSceneActive = false;
+        this.menuCameraAngle = 0;
+        this.menuCameraRadius = 14;
+        this.menuCameraHeight = 9;
+        this.menuCameraSpeed = 0.12;
+        this.menuCameraLerpSpeed = 0.06;
+        this.menuCameraBaseQuaternion = null;
+        this.menuCameraPosition = new THREE.Vector3();
+        this.menuCameraTarget = new THREE.Vector3();
         
         this.init();
     }
@@ -144,9 +156,14 @@ export class Game {
         // Setup enemy system callbacks for wave tracking
         this.enemySystem.setOnEnemySpawned(() => {
             this.waveSystem.onEnemySpawned();
+            this.playSfx('enemy_spawn');
         });
         this.enemySystem.setOnEnemyKilled(() => {
             this.waveSystem.onEnemyKilled();
+            this.playSfx('enemy_death');
+        });
+        this.enemySystem.setOnTotemDamaged(() => {
+            this.playSfx('totem_hit');
         });
         
         // Setup UI callbacks
@@ -185,6 +202,12 @@ export class Game {
             // Regenerate totem when night ends (new day starts)
             if (dayInfo.state === DayState.DAY) {
                 this.regenerateTotemHealth();
+            }
+
+            if (dayInfo.state === DayState.DAY) {
+                this.playSfx('day_start');
+            } else if (dayInfo.state === DayState.NIGHT) {
+                this.playSfx('night_start');
             }
 
             this.updateAudioState();
@@ -242,6 +265,8 @@ export class Game {
         // Start the wave
         this.waveSystem.startWave(waveNumber);
         const waveConfig = this.waveSystem.waveConfig;
+
+        this.playSfx('wave_start');
         
         // Update UI
         this.uiManager.updateWaveInfo(waveNumber, 0, waveConfig.enemyCount);
@@ -321,6 +346,7 @@ export class Game {
     setupUICallbacks() {
         this.uiManager.setEndDayCallback(() => {
             if (this.daySystem.isDay()) {
+                this.playSfx('totem_activate');
                 this.daySystem.endDay();
             }
         });
@@ -336,6 +362,7 @@ export class Game {
     toggleBuildMode() {
         // Can only enter build mode during day
         if (!this.daySystem.isDay() && !this.buildModeSystem.isActive()) {
+            this.playSfx('build_error');
             return;
         }
         
@@ -350,6 +377,7 @@ export class Game {
     }
     
     enterBuildMode() {
+        this.playSfx('build_open');
         // Show build menu
         const buildItems = this.buildModeSystem.getBuildItems();
         this.uiManager.showBuildMenu(
@@ -374,6 +402,7 @@ export class Game {
     }
     
     exitBuildMode() {
+        this.playSfx('build_close');
         // Hide build menu
         this.uiManager.hideBuildMenu();
         
@@ -406,6 +435,7 @@ export class Game {
     
     selectBuildItem(itemId) {
         if (this.buildModeSystem.selectBuildItem(itemId)) {
+            this.playSfx('build_select');
             // Hide build menu
             this.uiManager.hideBuildMenu();
             
@@ -491,6 +521,7 @@ export class Game {
         if (this.gameState === 'menu') {
             // Still update input for any menu interactions
             this.inputManager.update();
+            this.updateMenuScene(deltaTime);
             return;
         }
         
@@ -573,6 +604,7 @@ export class Game {
                             this.player.attackRange,
                             this.player.attackArc
                         );
+                        this.playSfx('player_attack');
                     }
                     
                 }
@@ -663,6 +695,7 @@ export class Game {
                 // Tree has finished falling, give resources
                 this.resourceSystem.addWood(1);
                 this.resourceSystem.addFood(1);
+                this.playSfx('resource_gain');
                 // Track tree cut for stats
                 this.daySystem.incrementTreesCut();
                 // Track for tutorial
@@ -776,6 +809,7 @@ export class Game {
                 } else if (buildItem.id === 'tower') {
                     building = new Tower(sitePos.x, sitePos.z, sitePos.y);
                     building.setFacingAngle(Math.PI);
+                    building.onFire = () => this.playSfx('tower_fire');
                     this.towers.push(building);
                     // Track first tower for tutorial and discount
                     if (!this.firstTowerBuilt) {
@@ -791,6 +825,7 @@ export class Game {
                     
                     // Visual effect for building completion
                     this.sceneManager.createParticleEffect(sitePos, 'buildingComplete');
+                    this.playSfx('build_complete');
                 }
                 
                 // Remove construction site
@@ -872,6 +907,8 @@ export class Game {
                 const itemId = itemIds[i];
                 if (this.buildModeSystem.canAffordBuildItem(itemId, this.daySystem, this.resourceSystem)) {
                     this.selectBuildItem(itemId);
+                } else {
+                    this.playSfx('build_error');
                 }
                 return;
             }
@@ -887,15 +924,19 @@ export class Game {
         if (this.inputManager.isAnyKeyPressed(CONTROLS.menuUp)) {
             const newIndex = Math.max(0, menuIndex - 1);
             this.uiManager.selectBuildMenuItem(newIndex);
+            this.playSfx('ui_navigate');
         } else if (this.inputManager.isAnyKeyPressed(CONTROLS.menuDown)) {
             const newIndex = Math.min(itemIds.length - 1, menuIndex + 1);
             this.uiManager.selectBuildMenuItem(newIndex);
+            this.playSfx('ui_navigate');
         } else if (this.inputManager.isAnyKeyPressed(CONTROLS.menuConfirm)) {
             const currentIndex = this.uiManager.selectedBuildItemIndex;
             if (currentIndex >= 0 && currentIndex < itemIds.length) {
                 const itemId = itemIds[currentIndex];
                 if (this.buildModeSystem.canAffordBuildItem(itemId, this.daySystem, this.resourceSystem)) {
                     this.selectBuildItem(itemId);
+                } else {
+                    this.playSfx('build_error');
                 }
             }
         }
@@ -984,6 +1025,7 @@ export class Game {
         if (this.inputManager.isAnyKeyPressed(CONTROLS.cancelBuild)) {
             this.buildModeSystem.cancelPlacement();
             this.cancelPlacementVisuals();
+            this.playSfx('ui_cancel');
             // Return to menu (Esc key exits completely, handled in handleBuildMode)
             this.enterBuildMode();
         }
@@ -1006,6 +1048,7 @@ export class Game {
         );
         
         if (!validation.valid) {
+            this.playSfx('build_error');
             return; // Can't place here
         }
         
@@ -1021,6 +1064,8 @@ export class Game {
         const constructionSite = new ConstructionSite(x, z, buildItem, y);
         this.constructionSites.push(constructionSite);
         this.sceneManager.add(constructionSite.getMesh());
+
+        this.playSfx('build_place');
         
         // Remove placement visuals
         this.cancelPlacementVisuals();
@@ -1109,6 +1154,7 @@ export class Game {
                     // Start falling animation and consume stamina
                     if (this.daySystem.consumeStamina(1)) {
                         nearestTree.startFalling(this.player.getPosition());
+                        this.playSfx('tree_fall');
                         // Update UI with new stamina value
                         this.uiManager.updateStamina(this.daySystem.getStamina(), this.daySystem.getMaxStamina());
                     } else {
@@ -1119,6 +1165,7 @@ export class Game {
                     // Start interaction only if stamina is available AND not already interacting AND progress hasn't reached 1.0
                     if (this.daySystem.hasStamina()) {
                         nearestTree.startInteraction();
+                        this.playSfx('tree_chop');
                     }
                 }
             } else {
@@ -1254,6 +1301,7 @@ export class Game {
         if (!this.isTotemInteracting) {
             this.isTotemInteracting = true;
             this.totemInteractionProgress = 0.0;
+            this.playSfx('totem_charge');
         }
 
         this.totemInteractionProgress += deltaTime / BUILDING_CONFIG.forestTotem.interactionDuration;
@@ -1261,6 +1309,7 @@ export class Game {
         if (this.totemInteractionProgress >= 1.0) {
             this.totemInteractionProgress = 1.0;
             this.isTotemInteracting = false;
+            this.playSfx('totem_activate');
             this.daySystem.endDay();
         }
     }
@@ -1280,6 +1329,7 @@ export class Game {
         const denPos = catDen.getPosition();
         const playerMaskColor = this.player.getMaskColor();
         const cat = new Cat(denPos.x, denPos.z, playerMaskColor, denPos.y);
+        cat.onGuardAttack = () => this.playSfx('cat_attack');
         
         // Calculate idle position near Forest Totem
         const totemPos = this.forestTotem.getPosition();
@@ -1304,6 +1354,7 @@ export class Game {
         
         // Visual effect for cat spawn
         this.sceneManager.createParticleEffect(denPos, 'catSpawn');
+        this.playSfx('cat_spawn');
     }
     
     updateCatDenTooltips(camera) {
@@ -1438,6 +1489,7 @@ export class Game {
         // If tower already has a cat, unassign it first
         if (tower.assignedCat) {
             tower.unassignCat();
+            this.playSfx('tower_unassign');
             return;
         }
         
@@ -1457,6 +1509,7 @@ export class Game {
         
         if (nearestCat) {
             tower.assignCat(nearestCat);
+            this.playSfx('tower_assign');
             // Track for tutorial
             this.catsAssignedToTowerCount++;
         }
@@ -1535,10 +1588,12 @@ export class Game {
         
         // Check for win condition
         if (this.waveSystem.hasWon()) {
+            this.playSfx('game_win');
             this.handleWin();
             return;
         }
-        
+
+        this.playSfx('wave_complete');
         // Move to next day (which will start next wave)
         this.daySystem.startNextDay();
     }
@@ -1561,6 +1616,7 @@ export class Game {
     
     handleGameOver() {
         this.isRunning = false;
+        this.playSfx('game_over');
         
         // Freeze all entities - stop all updates
         // The update loop will stop because isRunning is false
@@ -1591,6 +1647,8 @@ export class Game {
         this.gameState = 'menu';
         this.isRunning = true;
         this.lastTime = performance.now();
+        this.setupMenuScene();
+        this.uiManager.hideAllUI();
         this.uiManager.showMainMenu(() => {
             this.startGame();
         });
@@ -1601,7 +1659,9 @@ export class Game {
     
     startGame() {
         this.gameState = 'playing';
+        this.cleanupMenuScene();
         this.uiManager.hideMainMenu();
+        this.uiManager.showAllUI();
         
         // Show tutorial prompt
         this.uiManager.showTutorialPrompt(
@@ -1677,6 +1737,7 @@ export class Game {
         if (this.gameState === 'playing') {
             this.gameState = 'paused';
             this.updateAudioState();
+            this.playSfx('pause_open');
             this.uiManager.showPauseMenu(
                 () => this.resumeGame(),
                 () => this.restartGame()
@@ -1688,6 +1749,7 @@ export class Game {
         if (this.gameState === 'paused') {
             this.gameState = 'playing';
             this.updateAudioState();
+            this.playSfx('pause_close');
             this.uiManager.hidePauseMenu();
         }
     }
@@ -1708,6 +1770,138 @@ export class Game {
         if (this.sceneManager) {
             this.sceneManager.destroy();
         }
+    }
+
+    setupMenuScene() {
+        if (this.menuSceneActive) return;
+        this.menuSceneActive = true;
+        this.menuCameraAngle = Math.random() * Math.PI * 2;
+        this.menuCameraBaseQuaternion = this.sceneManager.camera.quaternion.clone();
+        this.spawnMenuCats(13);
+        this.updateMenuCamera(0, true);
+    }
+
+    cleanupMenuScene() {
+        if (!this.menuSceneActive) return;
+        this.menuSceneActive = false;
+        this.menuCats.forEach((cat) => {
+            if (cat && typeof cat.destroy === 'function') {
+                cat.destroy();
+            }
+        });
+        this.menuCats.length = 0;
+        if (this.menuCameraBaseQuaternion) {
+            this.sceneManager.camera.quaternion.copy(this.menuCameraBaseQuaternion);
+            this.menuCameraBaseQuaternion = null;
+        }
+        if (this.player && this.sceneManager) {
+            const playerPos = this.player.getPosition();
+            this.menuCameraPosition.copy(playerPos).add(this.sceneManager.cameraOffset);
+            this.sceneManager.camera.position.copy(this.menuCameraPosition);
+        }
+    }
+
+    spawnMenuCats(count) {
+        this.menuCats.forEach((cat) => {
+            if (cat && typeof cat.destroy === 'function') {
+                cat.destroy();
+            }
+        });
+        this.menuCats.length = 0;
+
+        if (!this.forestTotem || !this.mapSystem) return;
+        const totemPos = this.forestTotem.getPosition();
+        const radiusMin = MAP_CONFIG.catSpawnRadius.min + 0.6;
+        const radiusMax = MAP_CONFIG.catSpawnRadius.max + 1.4;
+
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * Math.PI * 2 + Math.random() * 0.6;
+            const radius = radiusMin + Math.random() * (radiusMax - radiusMin);
+            const x = totemPos.x + Math.cos(angle) * radius;
+            const z = totemPos.z + Math.sin(angle) * radius;
+            const y = this.mapSystem.getHeightAt(x, z);
+            const cat = new Cat(x, z, null, y);
+            cat.setIdlePosition(new THREE.Vector3(x, y, z));
+            const initialTarget = this.getMenuCatTarget();
+            if (initialTarget) {
+                cat.setTargetPosition(initialTarget);
+            }
+            cat.menuWanderTimer = this.getMenuWanderInterval();
+            this.menuCats.push(cat);
+            this.sceneManager.add(cat.getMesh());
+            cat.init();
+        }
+    }
+
+    updateMenuScene(deltaTime) {
+        if (!this.menuSceneActive) return;
+
+        this.updateMenuCamera(deltaTime);
+
+        if (this.forestTotem) {
+            this.forestTotem.update(deltaTime);
+        }
+
+        if (this.menuCats.length > 0) {
+            for (const cat of this.menuCats) {
+                if (!cat) continue;
+                cat.menuWanderTimer = (cat.menuWanderTimer ?? 0) - deltaTime;
+                if (!cat.targetPosition || cat.reachedTarget || cat.menuWanderTimer <= 0) {
+                    const nextTarget = this.getMenuCatTarget();
+                    if (nextTarget) {
+                        cat.setTargetPosition(nextTarget);
+                    }
+                    cat.menuWanderTimer = this.getMenuWanderInterval();
+                }
+                cat.update(deltaTime, {
+                    mapSystem: this.mapSystem,
+                    totem: this.forestTotem
+                });
+            }
+        }
+
+        this.sceneManager.update(deltaTime);
+    }
+
+    updateMenuCamera(deltaTime, snap = false) {
+        if (!this.forestTotem || !this.sceneManager) return;
+        this.menuCameraAngle += deltaTime * this.menuCameraSpeed;
+        const totemPos = this.forestTotem.getPosition();
+        const x = totemPos.x + Math.cos(this.menuCameraAngle) * this.menuCameraRadius;
+        const z = totemPos.z + Math.sin(this.menuCameraAngle) * this.menuCameraRadius;
+        const y = this.menuCameraHeight;
+
+        this.menuCameraPosition.set(x, y, z);
+        if (snap) {
+            this.sceneManager.camera.position.copy(this.menuCameraPosition);
+        } else {
+            this.sceneManager.camera.position.lerp(this.menuCameraPosition, this.menuCameraLerpSpeed);
+        }
+        this.menuCameraTarget.set(totemPos.x, totemPos.y + 1.2, totemPos.z);
+        this.sceneManager.camera.lookAt(this.menuCameraTarget);
+    }
+
+    getMenuCatTarget() {
+        if (!this.forestTotem || !this.mapSystem) return null;
+        const totemPos = this.forestTotem.getPosition();
+        const radiusMin = MAP_CONFIG.catSpawnRadius.min + 0.8;
+        const radiusMax = MAP_CONFIG.catSpawnRadius.max + 4.8;
+        const angle = Math.random() * Math.PI * 2;
+        const radius = radiusMin + Math.random() * (radiusMax - radiusMin);
+        const x = totemPos.x + Math.cos(angle) * radius;
+        const z = totemPos.z + Math.sin(angle) * radius;
+        const clamped = this.mapSystem.clampPosition(x, z);
+        const y = this.mapSystem.getHeightAt(clamped.x, clamped.z);
+        return new THREE.Vector3(clamped.x, y, clamped.z);
+    }
+
+    getMenuWanderInterval() {
+        return 1.6 + Math.random() * 3.2;
+    }
+
+    playSfx(key, options) {
+        if (!this.audioManager) return;
+        this.audioManager.playSfx(key, options);
     }
 
     updateAudioState() {

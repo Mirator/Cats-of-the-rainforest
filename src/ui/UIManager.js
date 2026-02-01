@@ -612,4 +612,10 @@ export class UIManager {
             this.interactionUI.hideAll();
         }
     }
+
+    showAllUI() {
+        if (this.container) {
+            this.container.style.display = 'block';
+        }
+    }
 }
