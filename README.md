@@ -11,6 +11,14 @@ npm run dev
 
 Open your browser to the URL shown (typically `http://localhost:3000`)
 
+## Itch.io build
+
+```bash
+npm run itch:zip
+```
+
+This creates `cats-of-the-rainforest-itch.zip` in the project root, ready to upload as an HTML5 game on itch.io.
+
 ## Controls
 
 - **WASD/Arrow Keys**: Move player
