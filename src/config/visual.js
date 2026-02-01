@@ -28,17 +28,17 @@ export const VISUAL_CONFIG = {
     
     // Scene colors
     dayBackground: 0x7fa88d,
-    nightBackground: 0x4a5f52,
+    nightBackground: 0x5f7867,
     dayFogColor: 0x7fa88d,
-    nightFogColor: 0x4a5f52,
+    nightFogColor: 0x5f7867,
     dayFogNear: 37.5,
     dayFogFar: 150,
-    nightFogNear: 26.0,
-    nightFogFar: 120.0,
+    nightFogNear: 30.0,
+    nightFogFar: 135.0,
     dayGroundColor: 0x6cab82,
-    nightGroundColor: 0x466155,
+    nightGroundColor: 0x567368,
     dayExtendedGroundColor: 0x5a8c6f,
-    nightExtendedGroundColor: 0x3a5147,
+    nightExtendedGroundColor: 0x4f6a60,
 
     // Terrain + procedural ground textures
     terrain: {
@@ -62,8 +62,8 @@ export const VISUAL_CONFIG = {
     // Lighting
     dayAmbientIntensity: 0.85,
     dayDirectionalIntensity: 1.05,
-    nightAmbientIntensity: 0.55,
-    nightDirectionalIntensity: 0.7,
+    nightAmbientIntensity: 0.7,
+    nightDirectionalIntensity: 0.85,
     
     // Day/Night transitions
     transitionDuration: 2.0, // seconds for smooth day/night transitions
