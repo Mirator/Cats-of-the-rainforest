@@ -10,6 +10,11 @@ export class WaveSystem {
         this.waveConfig = null;
         this.previousNightTotemHP = null; // HP percentage from previous night (0.0 to 1.0)
         this.previousWaveDifficultyMultiplier = null; // Difficulty multiplier from previous wave
+        this.gameMode = 'normal'; // 'normal' or 'endless'
+    }
+    
+    setGameMode(gameMode) {
+        this.gameMode = gameMode;
     }
 
     startWave(waveNumber) {
@@ -45,23 +50,51 @@ export class WaveSystem {
 
     getWaveConfig(waveNumber, difficultyMultiplier = 1.0) {
         const baseConfigs = WAVE_CONFIG.baseWaves;
-        const baseConfig = baseConfigs[waveNumber];
         
-        if (!baseConfig) {
-            return null;
+        // For endless mode waves > 5, use wave 2 as base
+        let baseConfig;
+        if (this.gameMode === 'endless' && waveNumber > 5) {
+            baseConfig = baseConfigs[2]; // Use wave 2 as base
+            if (!baseConfig) {
+                return null;
+            }
+        } else {
+            baseConfig = baseConfigs[waveNumber];
+            if (!baseConfig) {
+                return null;
+            }
         }
         
         // Create a copy of the base config
         const config = { ...baseConfig };
         
-        // Apply difficulty multiplier to enemy count
-        config.enemyCount = Math.max(1, Math.round(baseConfig.enemyCount * difficultyMultiplier));
-        
-        // Apply difficulty multiplier to HP multiplier
-        config.hpMultiplier = baseConfig.hpMultiplier * difficultyMultiplier;
-        
-        // Apply inverse multiplier to spawn interval (harder = faster spawns, easier = slower spawns)
-        config.spawnInterval = baseConfig.spawnInterval / difficultyMultiplier;
+        // For endless mode waves > 5, apply progressive scaling based on wave 2
+        if (this.gameMode === 'endless' && waveNumber > 5) {
+            // Progressive scaling: 15% increase per wave after wave 5
+            const endlessMultiplier = 1.0 + (waveNumber - 5) * 0.15;
+            
+            // Scale enemy count: baseCount * (1 + (wave - 5) * 0.2)
+            const enemyCountScale = 1 + (waveNumber - 5) * 0.2;
+            config.enemyCount = Math.max(1, Math.round(baseConfig.enemyCount * enemyCountScale * difficultyMultiplier));
+            
+            // Scale HP multiplier: baseHP * (1 + (wave - 5) * 0.15)
+            const hpScale = 1 + (waveNumber - 5) * 0.15;
+            config.hpMultiplier = baseConfig.hpMultiplier * hpScale * difficultyMultiplier;
+            
+            // Scale spawn interval: baseInterval / (1 + (wave - 5) * 0.1) (faster spawns)
+            const spawnIntervalScale = 1 + (waveNumber - 5) * 0.1;
+            config.spawnInterval = baseConfig.spawnInterval / spawnIntervalScale / difficultyMultiplier;
+        } else {
+            // Normal mode: apply difficulty multiplier only
+            // Apply difficulty multiplier to enemy count
+            config.enemyCount = Math.max(1, Math.round(baseConfig.enemyCount * difficultyMultiplier));
+            
+            // Apply difficulty multiplier to HP multiplier
+            config.hpMultiplier = baseConfig.hpMultiplier * difficultyMultiplier;
+            
+            // Apply inverse multiplier to spawn interval (harder = faster spawns, easier = slower spawns)
+            config.spawnInterval = baseConfig.spawnInterval / difficultyMultiplier;
+        }
         
         // Optionally adjust enemy types probabilities based on difficulty
         if (difficultyMultiplier !== 1.0 && config.enemyTypes) {
@@ -131,6 +164,10 @@ export class WaveSystem {
     }
 
     hasWon() {
+        // In endless mode, never win
+        if (this.gameMode === 'endless') {
+            return false;
+        }
         return this.currentWave >= 5 && this.isWaveComplete();
     }
 

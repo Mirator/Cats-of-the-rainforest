@@ -6,7 +6,7 @@ export class MenuUI {
         this.controlsScreen = null;
     }
     
-    showMainMenu(onStartGame, onShowControls) {
+    showMainMenu(onStartGame, onShowControls, onStartEndless = null) {
         // Remove existing main menu if present
         const existingMenu = document.getElementById('main-menu');
         if (existingMenu) {
@@ -60,6 +60,38 @@ export class MenuUI {
             }
         });
         
+        // Endless Mode button (only shown if callback is provided)
+        let endlessButton = null;
+        if (onStartEndless) {
+            endlessButton = document.createElement('button');
+            endlessButton.textContent = 'Endless Mode';
+            endlessButton.style.cssText = `
+                padding: 15px 40px;
+                font-size: 18px;
+                font-weight: bold;
+                background: #8b6f47;
+                color: white;
+                border: 2px solid #ffd700;
+                border-radius: 8px;
+                cursor: pointer;
+                margin: 10px;
+                transition: all 0.2s;
+            `;
+            endlessButton.addEventListener('mouseenter', () => {
+                endlessButton.style.background = '#9b7f57';
+                endlessButton.style.transform = 'scale(1.05)';
+            });
+            endlessButton.addEventListener('mouseleave', () => {
+                endlessButton.style.background = '#8b6f47';
+                endlessButton.style.transform = 'scale(1)';
+            });
+            endlessButton.addEventListener('click', () => {
+                if (onStartEndless) {
+                    onStartEndless();
+                }
+            });
+        }
+        
         const controlsButton = document.createElement('button');
         controlsButton.textContent = 'Controls';
         controlsButton.style.cssText = `
@@ -87,7 +119,7 @@ export class MenuUI {
             if (onShowControls) {
                 onShowControls(() => {
                     this.hideControlsScreen();
-                    this.showMainMenu(onStartGame, onShowControls);
+                    this.showMainMenu(onStartGame, onShowControls, onStartEndless);
                 });
             }
         });
@@ -101,6 +133,9 @@ export class MenuUI {
             </p>
         `;
         mainMenu.appendChild(startButton);
+        if (endlessButton) {
+            mainMenu.appendChild(endlessButton);
+        }
         mainMenu.appendChild(controlsButton);
         document.body.appendChild(mainMenu);
         

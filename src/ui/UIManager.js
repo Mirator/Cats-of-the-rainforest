@@ -468,7 +468,7 @@ export class UIManager {
     }
     
     // Win/Game Over screens
-    showWinScreen(screenshotDataURL = null, treesCutCount = 0) {
+    showWinScreen(screenshotDataURL = null, treesCutCount = 0, onBackToMenu = null) {
         const existingScreen = document.getElementById('win-screen');
         if (existingScreen) {
             existingScreen.remove();
@@ -549,7 +549,47 @@ export class UIManager {
             winScreen.innerHTML = content;
         }
         
+        // Add "Back to Menu" button
+        if (onBackToMenu) {
+            const backToMenuButton = document.createElement('button');
+            backToMenuButton.textContent = 'Back to Menu';
+            backToMenuButton.style.cssText = `
+                padding: 15px 40px;
+                font-size: 18px;
+                font-weight: bold;
+                background: #6a5a4a;
+                color: white;
+                border: 2px solid #8b7355;
+                border-radius: 8px;
+                cursor: pointer;
+                margin: 20px auto;
+                display: block;
+                transition: all 0.2s;
+            `;
+            backToMenuButton.addEventListener('mouseenter', () => {
+                backToMenuButton.style.background = '#7a6a5a';
+                backToMenuButton.style.transform = 'scale(1.05)';
+            });
+            backToMenuButton.addEventListener('mouseleave', () => {
+                backToMenuButton.style.background = '#6a5a4a';
+                backToMenuButton.style.transform = 'scale(1)';
+            });
+            backToMenuButton.addEventListener('click', () => {
+                if (onBackToMenu) {
+                    onBackToMenu();
+                }
+            });
+            winScreen.appendChild(backToMenuButton);
+        }
+        
         document.body.appendChild(winScreen);
+    }
+    
+    hideWinScreen() {
+        const winScreen = document.getElementById('win-screen');
+        if (winScreen) {
+            winScreen.remove();
+        }
     }
     
     showGameOverScreen(treesCutCount = 0) {

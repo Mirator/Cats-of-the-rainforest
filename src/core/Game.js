@@ -92,6 +92,9 @@ export class Game {
         this.gameTime = 0; // Total game time in seconds
         this.hasWon = false;
         
+        // Game mode: 'normal' or 'endless'
+        this.gameMode = 'normal';
+        
         // Game state: 'menu', 'playing', 'paused'
         this.gameState = 'menu';
         this.pauseMenuTogglePressed = false;
@@ -160,6 +163,7 @@ export class Game {
         
         // Initialize wave system
         this.waveSystem = new WaveSystem();
+        this.waveSystem.setGameMode(this.gameMode);
         
         // Initialize tutorial system
         this.tutorialSystem = new TutorialSystem();
@@ -1905,8 +1909,8 @@ export class Game {
     completeWave() {
         const waveNumber = this.waveSystem.getCurrentWave();
         
-        // Check for win condition
-        if (this.waveSystem.hasWon()) {
+        // Check for win condition (only in normal mode)
+        if (this.gameMode === 'normal' && this.waveSystem.hasWon()) {
             this.playSfx('game_win');
             this.handleWin();
             return;
@@ -1929,6 +1933,13 @@ export class Game {
     handleWin() {
         this.hasWon = true;
         
+        // Save win state to localStorage
+        try {
+            localStorage.setItem('catsOfTheRainforest_hasWon', 'true');
+        } catch (e) {
+            console.warn('Failed to save win state to localStorage:', e);
+        }
+        
         // Hide all UI elements
         this.uiManager.hideAllUI();
         
@@ -1938,8 +1949,19 @@ export class Game {
             const screenshotDataURL = this.sceneManager.captureScreenshot();
             
             // Show win screen with screenshot
-            this.uiManager.showWinScreen(screenshotDataURL, this.treesCutCount);
+            this.uiManager.showWinScreen(screenshotDataURL, this.treesCutCount, () => {
+                this.returnToMenu();
+            });
         });
+    }
+    
+    hasWonBefore() {
+        try {
+            return localStorage.getItem('catsOfTheRainforest_hasWon') === 'true';
+        } catch (e) {
+            console.warn('Failed to read win state from localStorage:', e);
+            return false;
+        }
     }
     
     handleGameOver() {
@@ -1977,15 +1999,22 @@ export class Game {
         this.lastTime = performance.now();
         this.setupMenuScene();
         this.uiManager.hideAllUI();
-        this.uiManager.showMainMenu(() => {
-            this.startGame();
-        });
+        this.uiManager.showMainMenu(
+            () => {
+                this.startGame('normal');
+            },
+            this.hasWonBefore() ? () => {
+                this.startGame('endless');
+            } : null
+        );
         this.updateAudioState();
         // Start game loop for rendering (updates are skipped when in menu state)
         this.gameLoop(this.lastTime);
     }
     
-    startGame() {
+    startGame(gameMode = 'normal') {
+        this.gameMode = gameMode;
+        this.waveSystem.setGameMode(gameMode);
         this.gameState = 'playing';
         this.cleanupMenuScene();
         this.uiManager.hideMainMenu();
@@ -2098,6 +2127,11 @@ export class Game {
     
     restartGame() {
         this.stop();
+        window.location.reload();
+    }
+    
+    returnToMenu() {
+        // Reload page to return to menu (cleanest approach)
         window.location.reload();
     }
     
