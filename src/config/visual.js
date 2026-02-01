@@ -71,7 +71,7 @@ export const VISUAL_CONFIG = {
     // Screenshot system
     screenshot: {
         cameraTransitionDuration: 2.0, // seconds to transition camera to map view
-        captureDelay: 0.5, // seconds to wait after camera transition before capture
+        captureDelay: 5.0, // seconds to wait after camera transition before capture
         mapPadding: 1.1 // extra padding to guarantee full playable map in frame
     },
     

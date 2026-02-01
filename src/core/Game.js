@@ -870,7 +870,10 @@ export class Game {
         }
         
         // Update camera to follow player (pass mapSystem for boundary slowdown)
-        this.sceneManager.updateCamera(this.player.getPosition(), this.mapSystem);
+        // Don't update camera if we've won (camera is being positioned for screenshot)
+        if (!this.hasWon) {
+            this.sceneManager.updateCamera(this.player.getPosition(), this.mapSystem);
+        }
         
         // Handle tree cutting (continuous hold interaction)
         this.handleTreeCutting(deltaTime);

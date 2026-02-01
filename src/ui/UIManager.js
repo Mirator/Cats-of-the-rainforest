@@ -503,7 +503,7 @@ export class UIManager {
         
         if (screenshotDataURL) {
             content += `
-                <div style="margin: 20px 0; width: min(90vw, 60vh); aspect-ratio: 1 / 1; border: 3px solid #ffd700; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3);">
+                <div style="margin: 20px auto; width: min(90vw, 60vh); aspect-ratio: 1 / 1; border: 3px solid #ffd700; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3);">
                     <img src="${screenshotDataURL}" style="width: 100%; height: 100%; object-fit: contain; display: block;" alt="Final Map Screenshot" />
                 </div>
                 <p style="font-size: 14px; color: #aaa; text-align: center; margin-top: 10px; margin-bottom: 20px;">Your final rainforest masterpiece</p>
@@ -520,7 +520,8 @@ export class UIManager {
                 border: 2px solid #228b22;
                 border-radius: 8px;
                 cursor: pointer;
-                margin: 10px;
+                margin: 10px auto;
+                display: block;
                 transition: all 0.2s;
             `;
             downloadButton.addEventListener('mouseenter', () => {
@@ -538,8 +539,8 @@ export class UIManager {
                 link.click();
             });
             
-            winScreen.appendChild(document.createElement('div'));
             const tempDiv = document.createElement('div');
+            tempDiv.style.cssText = 'display: flex; flex-direction: column; align-items: center; width: 100%;';
             tempDiv.innerHTML = content;
             winScreen.appendChild(tempDiv);
             winScreen.appendChild(downloadButton);
