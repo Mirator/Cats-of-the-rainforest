@@ -10,31 +10,18 @@ export class WaveSystem {
         this.waveConfig = null;
     }
 
-    startWave(waveNumber, miceAlert = 0) {
+    startWave(waveNumber) {
         this.currentWave = waveNumber;
         this.isWaveActive = true;
         this.enemiesSpawned = 0;
         this.enemiesKilled = 0;
-        this.waveConfig = this.getWaveConfig(waveNumber, miceAlert);
+        this.waveConfig = this.getWaveConfig(waveNumber);
         this.enemiesToSpawn = this.waveConfig.enemyCount;
     }
 
-    getWaveConfig(waveNumber, miceAlert = 0) {
+    getWaveConfig(waveNumber) {
         const baseConfigs = WAVE_CONFIG.baseWaves;
-        const config = { ...baseConfigs[waveNumber] };
-
-        // Apply miceAlert scaling (only for waves 1-4)
-        if (waveNumber < 5 && miceAlert > 0) {
-            // Extra enemies
-            const extraEnemies = Math.min(Math.floor(miceAlert), WAVE_CONFIG.miceAlert.maxExtraEnemies);
-            config.enemyCount += extraEnemies;
-            
-            // Spawn rate multiplier (faster spawning)
-            const spawnRateMultiplier = 1 + (miceAlert * WAVE_CONFIG.miceAlert.scalingMultiplier);
-            config.spawnInterval = config.spawnInterval / spawnRateMultiplier;
-        }
-
-        return config;
+        return { ...baseConfigs[waveNumber] };
     }
 
     onEnemySpawned() {

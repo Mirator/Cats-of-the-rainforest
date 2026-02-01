@@ -233,13 +233,9 @@ export class Game {
     startWave() {
         const currentDay = this.daySystem.getCurrentDay();
         const waveNumber = currentDay; // Each day = 1 wave
-        
-        // Calculate miceAlert from trees cut today
-        const treesCutToday = this.daySystem.getTreesCutToday();
-        const miceAlert = Math.min(treesCutToday * 0.5, WAVE_CONFIG.miceAlert.maxExtraEnemies);
-        
+
         // Start the wave
-        this.waveSystem.startWave(waveNumber, miceAlert);
+        this.waveSystem.startWave(waveNumber);
         const waveConfig = this.waveSystem.waveConfig;
         
         // Update UI
@@ -662,7 +658,7 @@ export class Game {
                 // Tree has finished falling, give resources
                 this.resourceSystem.addWood(1);
                 this.resourceSystem.addFood(1);
-                // Track tree cut for miceAlert calculation
+                // Track tree cut for stats
                 this.daySystem.incrementTreesCut();
                 // Track for tutorial
                 this.treesCutCount++;

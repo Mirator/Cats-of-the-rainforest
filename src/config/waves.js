@@ -50,12 +50,6 @@ export const WAVE_CONFIG = {
         }
     },
     
-    // MiceAlert scaling (only for waves 1-4)
-    miceAlert: {
-        scalingMultiplier: 0.05,
-        maxExtraEnemies: 12
-    },
-    
     // Wave spawn delay
     initialSpawnDelay: 1.5 // seconds before first enemy spawns
 };
