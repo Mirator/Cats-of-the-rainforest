@@ -473,8 +473,8 @@ export class UIManager {
         
         const treesCutLine = this.getTreesCutLine(treesCutCount, true);
         let content = `
-            <h1 style="font-size: 48px; margin-bottom: 20px; color: #ffd700; text-align: center;">Victory!</h1>
-            <p style="font-size: 24px; margin-bottom: 40px; text-align: center;">You have protected the rainforest!</p>
+            <h1 style="font-size: 48px; margin-bottom: 20px; color: #ffd700; text-align: center;">The Tribe Prevails</h1>
+            <p style="font-size: 24px; margin-bottom: 40px; text-align: center;">The cats held the line; the totem still glows.</p>
             <p style="font-size: 18px; color: #ccc; text-align: center; max-width: 700px; margin-bottom: 20px;">${treesCutLine}</p>
         `;
         
@@ -576,8 +576,8 @@ export class UIManager {
         });
         
         gameOverScreen.innerHTML = `
-            <h1 style="font-size: 48px; margin-bottom: 20px; color: #ff4444;">The Forest Has Fallen</h1>
-            <p style="font-size: 24px; margin-bottom: 40px; text-align: center;">The Forest Totem has been destroyed!</p>
+            <h1 style="font-size: 48px; margin-bottom: 20px; color: #ff4444;">The Totem Falls</h1>
+            <p style="font-size: 24px; margin-bottom: 40px; text-align: center;">The tribe is scattered and the totem lies in ruin.</p>
             <p style="font-size: 18px; color: #aaa; text-align: center; max-width: 600px; margin-bottom: 20px;">The masked mice have overwhelmed the forest. The totem crumbles, and darkness spreads across the land.</p>
             <p style="font-size: 18px; color: #ccc; text-align: center; max-width: 700px; margin-bottom: 10px;">${treesCutLine}</p>
         `;
@@ -588,15 +588,15 @@ export class UIManager {
     getTreesCutLine(treesCutCount, isWin) {
         if (isWin) {
             const treeLabel = treesCutCount === 1 ? 'tree' : 'trees';
-            return `You cut ${treesCutCount} ${treeLabel}. Could you have cut fewer?`;
+            return `We defended the totem, and ${treesCutCount} ${treeLabel} paid the price. Could we have asked less of the woods?`;
         }
         
         if (treesCutCount === 0) {
-            return 'You cut zero trees, so either you were unskilled or you wanted to save nature by not killing it?';
+            return 'No trees were taken. Mercy to the woods... and a harder fate for the tribe.';
         }
         
         const treeLabel = treesCutCount === 1 ? 'tree' : 'trees';
-        return `You cut ${treesCutCount} ${treeLabel}. Maybe it wasn't enough, but maybe it was too much?`;
+        return `${treesCutCount} ${treeLabel} fell in the cats' defense. The forest remembers, and still we lost.`;
     }
     
     hideAllUI() {
