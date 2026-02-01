@@ -769,6 +769,7 @@ export class Game {
                     }
                 } else if (buildItem.id === 'tower') {
                     building = new Tower(sitePos.x, sitePos.z, sitePos.y);
+                    building.setFacingAngle(Math.PI);
                     this.towers.push(building);
                     // Track first tower for tutorial and discount
                     if (!this.firstTowerBuilt) {
