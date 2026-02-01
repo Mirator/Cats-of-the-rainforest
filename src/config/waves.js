@@ -14,7 +14,7 @@ export const WAVE_CONFIG = {
         2: {
             enemyCount: 9,
             hpMultiplier: 1.2,
-            spawnInterval: 1.0,
+            spawnInterval: 1.5,
             enemyTypes: [
                 { type: 'regular', probability: 0.75 },
                 { type: 'fast', probability: 0.25 }
