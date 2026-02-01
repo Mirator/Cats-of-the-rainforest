@@ -31,3 +31,7 @@ This creates `cats-of-the-rainforest-itch.zip` in the project root, ready to upl
 
 **Day Phase**: Cut trees (food + wood), build Cat Dens and Towers, train cats, assign cats to towers.  
 **Night Phase**: Defend the Forest Totem from enemy waves. Survive all 5 waves to win.
+
+## License
+
+This project is licensed under the [Creative Commons Attribution 4.0 International License](LICENSE).
