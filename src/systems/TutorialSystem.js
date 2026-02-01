@@ -8,14 +8,20 @@ export class TutorialSystem {
         // Define tutorial steps
         this.steps = [
             {
-                name: "Cut down trees",
-                instructions: "Move with WASD or Arrow Keys. Hold Space near a tree to cut it down and gather resources",
-                controls: "WASD or Arrow Keys, Space",
+                name: "Forest Totem",
+                instructions: "This is the Forest Totem. Defend it from enemies. Buildings must be built around it.",
+                controls: "WASD or Arrow Keys to look around",
                 completionCheck: null // Will be set by game
             },
             {
+                name: "Gather resources",
+                instructions: "Trees provide Food and Wood. Hold Space near a tree to cut it down. Stamina refreshes every day.",
+                controls: "Hold Space near a tree",
+                completionCheck: null
+            },
+            {
                 name: "Build a cat den",
-                instructions: "Press B to open Build Menu, then select Cat Den and place it near the totem",
+                instructions: "Press B to open Build Menu, then select Cat Den and place it near the Totem",
                 controls: "Press B, then select Cat Den",
                 completionCheck: null
             },
@@ -65,9 +71,13 @@ export class TutorialSystem {
     
     getProgress() {
         if (!this.isActive) {
-            return "0/6";
+            return `0/${this.steps.length}`;
         }
-        return `${this.currentStepIndex + 1}/6`;
+        return `${this.currentStepIndex + 1}/${this.steps.length}`;
+    }
+
+    getCurrentStepIndex() {
+        return this.currentStepIndex;
     }
     
     checkStepCompletion() {

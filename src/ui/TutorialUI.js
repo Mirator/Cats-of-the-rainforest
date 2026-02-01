@@ -4,7 +4,33 @@ export class TutorialUI {
         this.container = container;
         this.tutorialPanel = null;
         this.tutorialPrompt = null;
+        this.focusOverlay = null;
+        this.focusOverlayHideTimer = null;
+        this.createFocusOverlay();
         this.createTutorialPanel();
+    }
+
+    createFocusOverlay() {
+        this.focusOverlay = document.createElement('div');
+        this.focusOverlay.id = 'tutorial-focus-overlay';
+        this.focusOverlay.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            pointer-events: none;
+            opacity: 0;
+            display: none;
+            transition: opacity 0.2s;
+        `;
+
+        if (this.container.firstChild) {
+            this.container.insertBefore(this.focusOverlay, this.container.firstChild);
+        } else {
+            this.container.appendChild(this.focusOverlay);
+        }
     }
     
     createTutorialPanel() {
@@ -31,10 +57,10 @@ export class TutorialUI {
         `;
         
         this.tutorialPanel.innerHTML = `
-            <div id="tutorial-progress" style="font-size: 14px; color: #aaa; margin-bottom: 8px;">Step 1/6</div>
-            <div id="tutorial-step-name" style="font-size: 18px; font-weight: bold; color: #ffd700; margin-bottom: 12px;">Cut down trees</div>
-            <div id="tutorial-instructions" style="font-size: 14px; color: #ddd; margin-bottom: 8px; line-height: 1.4;">Hold Space near a tree to cut it down and gather resources</div>
-            <div id="tutorial-controls" style="font-size: 12px; color: #aaa; font-style: italic;">Hold Space</div>
+            <div id="tutorial-progress" style="font-size: 14px; color: #aaa; margin-bottom: 8px;">Step 1/7</div>
+            <div id="tutorial-step-name" style="font-size: 18px; font-weight: bold; color: #ffd700; margin-bottom: 12px;">Forest Totem</div>
+            <div id="tutorial-instructions" style="font-size: 14px; color: #ddd; margin-bottom: 8px; line-height: 1.4;">This is the Forest Totem. Defend it from enemies. Buildings must be built around it.</div>
+            <div id="tutorial-controls" style="font-size: 12px; color: #aaa; font-style: italic;">WASD or Arrow Keys to look around</div>
         `;
         
         this.container.appendChild(this.tutorialPanel);
@@ -56,6 +82,56 @@ export class TutorialUI {
                 this.tutorialPanel.style.display = 'none';
             }, 300);
         }
+    }
+
+    showFocusOverlay() {
+        if (!this.focusOverlay) return;
+        if (this.focusOverlayHideTimer) {
+            clearTimeout(this.focusOverlayHideTimer);
+            this.focusOverlayHideTimer = null;
+        }
+        this.focusOverlay.style.display = 'block';
+        requestAnimationFrame(() => {
+            if (this.focusOverlay) {
+                this.focusOverlay.style.opacity = '1';
+            }
+        });
+    }
+
+    hideFocusOverlay() {
+        if (!this.focusOverlay) return;
+        this.focusOverlay.style.opacity = '0';
+        if (this.focusOverlayHideTimer) {
+            clearTimeout(this.focusOverlayHideTimer);
+        }
+        this.focusOverlayHideTimer = setTimeout(() => {
+            if (this.focusOverlay) {
+                this.focusOverlay.style.display = 'none';
+                this.focusOverlay.style.background = 'rgba(0, 0, 0, 0.6)';
+            }
+            this.focusOverlayHideTimer = null;
+        }, 200);
+    }
+
+    updateFocusOverlay(points = [], options = {}) {
+        if (!this.focusOverlay) return;
+
+        const baseOpacity = typeof options.baseOpacity === 'number' ? options.baseOpacity : 0.6;
+        const baseColor = `rgba(0, 0, 0, ${baseOpacity})`;
+        if (!points.length) {
+            this.focusOverlay.style.background = baseColor;
+            return;
+        }
+
+        const gradients = points.map((point) => {
+            const radius = Math.max(60, point.radius || 140);
+            const inner = Math.round(radius * 0.55);
+            const x = Math.round(point.x);
+            const y = Math.round(point.y);
+            return `radial-gradient(circle ${radius}px at ${x}px ${y}px, rgba(0, 0, 0, 0) 0, rgba(0, 0, 0, 0) ${inner}px, ${baseColor} ${radius}px)`;
+        });
+
+        this.focusOverlay.style.background = `${gradients.join(', ')}, ${baseColor}`;
     }
     
     updateStep(stepData, progress) {

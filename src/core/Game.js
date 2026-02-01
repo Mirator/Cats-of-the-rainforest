@@ -51,6 +51,17 @@ export class Game {
         this.treesCutCount = 0;
         this.catsSpawnedCount = 0;
         this.catsAssignedToTowerCount = 0;
+
+        // Tutorial highlight tracking
+        this.tutorialHighlightGroup = null;
+        this.tutorialHighlightMeshes = [];
+        this.tutorialHighlightPulseTime = 0;
+        this.lastTutorialStepIndex = -1;
+        this.tutorialStepStartTime = 0;
+        this.tutorialFocusTargets = [];
+        this.tutorialFocusRadii = [];
+        this.tutorialFocusActive = false;
+        this.tutorialFocusOpacity = 0.6;
         
         this.player = null;
         this.trees = [];
@@ -229,32 +240,40 @@ export class Game {
     setupTutorialSystem() {
         // Set up completion checks for each tutorial step
         this.tutorialSystem.setStepCompletionCheck(0, () => {
-            // Step 1: Cut down trees
-            return this.treesCutCount > 0;
+            // Step 1: Forest Totem
+            const totemPos = this.forestTotem.getPosition();
+            const distance = this.player.getPosition().distanceTo(totemPos);
+            const closeEnough = distance <= (COMBAT_CONFIG.totemCollisionRadius * 3);
+            return closeEnough || this.getTutorialStepElapsedMs() >= 8000;
         });
         
         this.tutorialSystem.setStepCompletionCheck(1, () => {
-            // Step 2: Build a cat den
-            return this.firstCatDenBuilt;
+            // Step 2: Gather resources
+            return this.treesCutCount > 0;
         });
         
         this.tutorialSystem.setStepCompletionCheck(2, () => {
-            // Step 3: Spawn a cat
-            return this.catsSpawnedCount > 0;
+            // Step 3: Build a cat den
+            return this.firstCatDenBuilt;
         });
         
         this.tutorialSystem.setStepCompletionCheck(3, () => {
-            // Step 4: Assign cat to tower
-            return this.catsAssignedToTowerCount > 0;
+            // Step 4: Spawn a cat
+            return this.catsSpawnedCount > 0;
         });
         
         this.tutorialSystem.setStepCompletionCheck(4, () => {
-            // Step 5: Go to night
-            return this.daySystem.isNight() && this.daySystem.getCurrentDay() === 1;
+            // Step 5: Assign cat to tower
+            return this.catsAssignedToTowerCount > 0;
         });
         
         this.tutorialSystem.setStepCompletionCheck(5, () => {
-            // Step 6: Survive the first night
+            // Step 6: Go to night
+            return this.daySystem.isNight() && this.daySystem.getCurrentDay() === 1;
+        });
+
+        this.tutorialSystem.setStepCompletionCheck(6, () => {
+            // Step 7: Survive the first night
             return this.waveSystem.getCurrentWave() === 1 && this.waveSystem.isWaveComplete();
         });
     }
@@ -512,6 +531,228 @@ export class Game {
             this.ghostPreview = null;
         }
         this.hideTotemInfluenceVisualization();
+    }
+
+    resetTutorialStepTracking() {
+        this.lastTutorialStepIndex = -1;
+        this.tutorialStepStartTime = performance.now();
+        this.tutorialHighlightPulseTime = 0;
+        this.clearTutorialFocusOverlay();
+    }
+
+    getTutorialStepElapsedMs() {
+        return performance.now() - this.tutorialStepStartTime;
+    }
+
+    clearTutorialHighlights() {
+        if (this.tutorialHighlightGroup) {
+            this.sceneManager.remove(this.tutorialHighlightGroup);
+            this.tutorialHighlightGroup.traverse((child) => {
+                if (child.isMesh) {
+                    if (child.geometry) {
+                        child.geometry.dispose();
+                    }
+                    if (child.material) {
+                        if (Array.isArray(child.material)) {
+                            child.material.forEach((material) => material.dispose());
+                        } else {
+                            child.material.dispose();
+                        }
+                    }
+                }
+            });
+        }
+        this.tutorialHighlightGroup = null;
+        this.tutorialHighlightMeshes = [];
+    }
+
+    clearTutorialFocusOverlay() {
+        this.tutorialFocusTargets = [];
+        this.tutorialFocusRadii = [];
+        this.tutorialFocusActive = false;
+        this.tutorialFocusOpacity = 0.6;
+        if (this.uiManager) {
+            this.uiManager.hideTutorialFocusOverlay();
+        }
+    }
+
+    createTutorialRing(position, innerRadius, outerRadius, color, opacity = 0.6) {
+        const ringGeometry = new THREE.RingGeometry(innerRadius, outerRadius, 48);
+        const ringMaterial = new THREE.MeshBasicMaterial({
+            color,
+            transparent: true,
+            opacity,
+            side: THREE.DoubleSide,
+            depthTest: false,
+            depthWrite: false
+        });
+        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.set(position.x, position.y + 0.03, position.z);
+        ring.renderOrder = 20;
+        ring.userData = {
+            baseOpacity: opacity,
+            baseScale: 1,
+            pulseAmplitude: 0.12,
+            pulseSpeed: 2.2,
+            phase: Math.random() * Math.PI * 2
+        };
+        this.tutorialHighlightMeshes.push(ring);
+        return ring;
+    }
+
+    setTutorialHighlightsForStep(stepIndex) {
+        this.clearTutorialHighlights();
+        this.clearTutorialFocusOverlay();
+
+        if (!this.sceneManager) {
+            return;
+        }
+
+        if (stepIndex === 0) {
+            const totemPos = this.forestTotem.getPosition();
+            const group = new THREE.Group();
+
+            const smallRing = this.createTutorialRing(totemPos, 0.55, 0.85, 0xffd36a, 0.7);
+            smallRing.userData.pulseAmplitude = 0.08;
+
+            const auraRing = this.createTutorialRing(totemPos, 0.9, 1.25, 0xffd36a, 0.45);
+            auraRing.userData.pulseSpeed = 1.4;
+
+            group.add(smallRing);
+            group.add(auraRing);
+
+            const totemLight = new THREE.PointLight(0xffe2a1, 1.4, 8, 2);
+            totemLight.position.set(totemPos.x, totemPos.y + 1.7, totemPos.z);
+            group.add(totemLight);
+
+            const buildRadius = this.buildModeSystem.getTotemInfluenceRadius();
+            if (buildRadius) {
+                const buildRing = this.createTutorialRing(
+                    totemPos,
+                    Math.max(0.2, buildRadius - 0.25),
+                    buildRadius,
+                    0x5cff9a,
+                    0.22
+                );
+                buildRing.userData.pulseSpeed = 0.8;
+                buildRing.userData.pulseAmplitude = 0.04;
+                group.add(buildRing);
+            }
+
+            this.tutorialHighlightGroup = group;
+            this.sceneManager.add(group);
+            const totemTop = totemPos.clone();
+            totemTop.y += 2.4;
+            this.tutorialFocusTargets = [totemPos, totemTop];
+            this.tutorialFocusRadii = [260, 230];
+            this.tutorialFocusActive = true;
+            this.tutorialFocusOpacity = 0.35;
+        } else if (stepIndex === 1) {
+            const group = new THREE.Group();
+            const treeCandidates = this.trees.filter((tree) => !tree.isCut && !tree.isFalling);
+            const playerPos = this.player.getPosition();
+
+            treeCandidates.sort((a, b) => {
+                const dxA = a.position.x - playerPos.x;
+                const dzA = a.position.z - playerPos.z;
+                const distA = (dxA * dxA) + (dzA * dzA);
+                const dxB = b.position.x - playerPos.x;
+                const dzB = b.position.z - playerPos.z;
+                const distB = (dxB * dxB) + (dzB * dzB);
+                return distA - distB;
+            });
+
+            const highlightCount = Math.min(3, treeCandidates.length);
+            const focusTargets = [];
+            const focusRadii = [];
+            for (let i = 0; i < highlightCount; i++) {
+                const tree = treeCandidates[i];
+                const ring = this.createTutorialRing(tree.position, 0.6, 0.95, 0x7cff6b, 0.55);
+                ring.userData.pulseSpeed = 2 + (i * 0.3);
+                group.add(ring);
+                const treeLight = new THREE.PointLight(0xffe2a1, 1.4, 8, 2);
+                treeLight.position.set(tree.position.x, tree.position.y + 1.7, tree.position.z);
+                group.add(treeLight);
+                focusTargets.push(tree.position);
+                focusRadii.push(260);
+            }
+
+            if (highlightCount > 0) {
+                this.tutorialHighlightGroup = group;
+                this.sceneManager.add(group);
+                this.tutorialFocusTargets = focusTargets;
+                this.tutorialFocusRadii = focusRadii;
+                this.tutorialFocusActive = true;
+                this.tutorialFocusOpacity = 0.25;
+            } else {
+                this.clearTutorialHighlights();
+            }
+        }
+    }
+
+    updateTutorialFocusOverlay() {
+        if (!this.tutorialFocusActive || !this.sceneManager || !this.uiManager) {
+            return;
+        }
+
+        const camera = this.sceneManager.camera;
+        const renderer = this.sceneManager.renderer;
+        if (!camera || !renderer) {
+            return;
+        }
+
+        const rect = renderer.domElement.getBoundingClientRect();
+        const points = [];
+
+        for (let i = 0; i < this.tutorialFocusTargets.length; i++) {
+            const target = this.tutorialFocusTargets[i];
+            if (!target) continue;
+            const projected = target.clone().project(camera);
+
+            if (projected.z < -1 || projected.z > 1) continue;
+
+            const x = (projected.x * 0.5 + 0.5) * rect.width;
+            const y = (-projected.y * 0.5 + 0.5) * rect.height;
+            if (x < -200 || x > rect.width + 200 || y < -200 || y > rect.height + 200) {
+                continue;
+            }
+
+            points.push({
+                x,
+                y,
+                radius: this.tutorialFocusRadii[i] || 160
+            });
+        }
+
+        if (points.length > 0) {
+            this.uiManager.showTutorialFocusOverlay();
+            this.uiManager.updateTutorialFocusOverlay(points, { baseOpacity: this.tutorialFocusOpacity });
+        } else {
+            this.uiManager.hideTutorialFocusOverlay();
+        }
+    }
+
+    updateTutorialHighlights(deltaTime) {
+        if (!this.tutorialHighlightGroup || this.tutorialHighlightMeshes.length === 0) {
+            if (this.tutorialFocusActive) {
+                this.updateTutorialFocusOverlay();
+            }
+            return;
+        }
+
+        this.tutorialHighlightPulseTime += deltaTime;
+
+        this.tutorialHighlightMeshes.forEach((ring) => {
+            if (!ring.material) return;
+            const { baseOpacity, baseScale, pulseAmplitude, pulseSpeed, phase } = ring.userData;
+            const pulse = (Math.sin(this.tutorialHighlightPulseTime * pulseSpeed + phase) + 1) * 0.5;
+            const scale = baseScale + (pulseAmplitude * pulse);
+            ring.scale.set(scale, scale, scale);
+            ring.material.opacity = baseOpacity * (0.65 + (0.35 * pulse));
+        });
+
+        this.updateTutorialFocusOverlay();
     }
     
     update(deltaTime) {
@@ -853,6 +1094,7 @@ export class Game {
         // Update tutorial UI
         if (this.tutorialSystem && this.tutorialSystem.isActive && !this.tutorialSystem.isTutorialComplete()) {
             this.updateTutorialUI();
+            this.updateTutorialHighlights(deltaTime);
         }
     }
     
@@ -1681,6 +1923,8 @@ export class Game {
         this.uiManager.showTutorialPrompt(
             () => {
                 // Yes - start tutorial
+                this.clearTutorialHighlights();
+                this.resetTutorialStepTracking();
                 this.tutorialSystem.start();
                 this.uiManager.showTutorial();
                 this.updateTutorialUI();
@@ -1689,6 +1933,8 @@ export class Game {
             () => {
                 // No - skip tutorial
                 this.tutorialSystem.stop();
+                this.clearTutorialHighlights();
+                this.resetTutorialStepTracking();
                 this.updateAudioState();
             }
         );
@@ -1698,8 +1944,16 @@ export class Game {
         if (this.tutorialSystem.isActive && !this.tutorialSystem.isTutorialComplete()) {
             const currentStep = this.tutorialSystem.getCurrentStep();
             const progress = this.tutorialSystem.getProgress();
+            const stepIndex = this.tutorialSystem.getCurrentStepIndex();
             
             if (currentStep) {
+                if (stepIndex !== this.lastTutorialStepIndex) {
+                    this.lastTutorialStepIndex = stepIndex;
+                    this.tutorialStepStartTime = performance.now();
+                    this.tutorialHighlightPulseTime = 0;
+                    this.setTutorialHighlightsForStep(stepIndex);
+                }
+
                 this.uiManager.updateTutorialStep(currentStep, progress);
                 
                 // Check if current step is complete
@@ -1708,6 +1962,8 @@ export class Game {
                     
                     if (this.tutorialSystem.isTutorialComplete()) {
                         this.uiManager.hideTutorial();
+                        this.clearTutorialHighlights();
+                        this.resetTutorialStepTracking();
                     } else {
                         this.updateTutorialUI();
                     }

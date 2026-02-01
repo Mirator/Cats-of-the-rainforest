@@ -437,6 +437,24 @@ export class UIManager {
             this.tutorialUI.updateStep(stepData, progress);
         }
     }
+
+    showTutorialFocusOverlay() {
+        if (this.tutorialUI) {
+            this.tutorialUI.showFocusOverlay();
+        }
+    }
+
+    hideTutorialFocusOverlay() {
+        if (this.tutorialUI) {
+            this.tutorialUI.hideFocusOverlay();
+        }
+    }
+
+    updateTutorialFocusOverlay(points, options) {
+        if (this.tutorialUI) {
+            this.tutorialUI.updateFocusOverlay(points, options);
+        }
+    }
     
     showTutorialPrompt(onYes, onNo) {
         if (this.tutorialUI) {
