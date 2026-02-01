@@ -61,10 +61,10 @@ export class PlacementCursor {
         this.mesh = group;
     }
     
-    setPosition(x, z) {
+    setPosition(x, z, y = 0) {
         this.position.x = x;
         this.position.z = z;
-        this.position.y = 0.1; // Slightly above ground
+        this.position.y = y + 0.1; // Slightly above ground
         
         if (this.mesh) {
             this.mesh.position.copy(this.position);

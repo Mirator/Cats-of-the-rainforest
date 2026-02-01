@@ -4,8 +4,8 @@ import { PLAYER_CONFIG } from '../config/player.js';
 import { COMBAT_CONFIG } from '../config/combat.js';
 
 export class Player {
-    constructor(x, z) {
-        this.position = new THREE.Vector3(x, 0, z);
+    constructor(x, z, y = 0) {
+        this.position = new THREE.Vector3(x, y, z);
         this.mesh = null;
         this.speed = PLAYER_CONFIG.speed;
         this.interactionRange = PLAYER_CONFIG.interactionRange;
@@ -70,6 +70,7 @@ export class Player {
 
             this.position.x = resolved.x;
             this.position.z = resolved.z;
+            this.position.y = mapSystem ? mapSystem.getHeightAt(resolved.x, resolved.z) : this.position.y;
 
             this.mesh.position.x = this.position.x;
             this.mesh.position.y = this.position.y + this.yOffset;
@@ -86,6 +87,11 @@ export class Player {
                 0,
                 -Math.cos(angle)
             ).normalize();
+        } else if (mapSystem) {
+            this.position.y = mapSystem.getHeightAt(this.position.x, this.position.z);
+            if (this.mesh) {
+                this.mesh.position.y = this.position.y + this.yOffset;
+            }
         }
     }
 

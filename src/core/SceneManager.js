@@ -42,6 +42,11 @@ export class SceneManager {
         const { width, height } = this.getContainerSize();
         this.renderer.setSize(width, height);
         this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.toneMappingExposure = 1.15;
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.container.appendChild(this.renderer.domElement);
         
         // Create camera (positioned for 2.5D view)
@@ -67,6 +72,14 @@ export class SceneManager {
         this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
         this.directionalLight.position.set(10, 20, 10);
         this.directionalLight.castShadow = true;
+        this.directionalLight.shadow.mapSize.set(1024, 1024);
+        this.directionalLight.shadow.camera.near = 1;
+        this.directionalLight.shadow.camera.far = 140;
+        this.directionalLight.shadow.camera.left = -70;
+        this.directionalLight.shadow.camera.right = 70;
+        this.directionalLight.shadow.camera.top = 70;
+        this.directionalLight.shadow.camera.bottom = -70;
+        this.directionalLight.shadow.bias = -0.0004;
         this.scene.add(this.directionalLight);
         
         // Add fog for atmospheric effect (terrain-matching green)

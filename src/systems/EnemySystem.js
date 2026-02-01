@@ -58,7 +58,8 @@ export class EnemySystem {
 
             // Check if spawn position is clear
             if (this.isSpawnPositionClear(x, z, trees, spawnRadius)) {
-                const mouse = this.createEnemyByType(enemyType, x, z, hpMultiplier);
+                const y = this.mapSystem.getHeightAt(x, z);
+                const mouse = this.createEnemyByType(enemyType, x, z, hpMultiplier, y);
                 if (mouse) {
                     this.enemies.push(mouse);
                     this.sceneManager.add(mouse.getMesh());
@@ -71,7 +72,8 @@ export class EnemySystem {
         }
 
         // If no clear position found after maxAttempts, spawn anyway (at last attempted position)
-        const mouse = this.createEnemyByType(enemyType, x, z, hpMultiplier);
+        const y = this.mapSystem.getHeightAt(x, z);
+        const mouse = this.createEnemyByType(enemyType, x, z, hpMultiplier, y);
         if (mouse) {
             this.enemies.push(mouse);
             this.sceneManager.add(mouse.getMesh());
@@ -83,15 +85,15 @@ export class EnemySystem {
         return null;
     }
     
-    createEnemyByType(enemyType, x, z, hpMultiplier) {
+    createEnemyByType(enemyType, x, z, hpMultiplier, y = 0) {
         switch (enemyType) {
             case 'fast':
-                return new FastMouse(x, z, hpMultiplier);
+                return new FastMouse(x, z, hpMultiplier, y);
             case 'strong':
-                return new StrongMouse(x, z, hpMultiplier);
+                return new StrongMouse(x, z, hpMultiplier, y);
             case 'regular':
             default:
-                return new Mouse(x, z, hpMultiplier);
+                return new Mouse(x, z, hpMultiplier, y);
         }
     }
     
@@ -185,7 +187,14 @@ export class EnemySystem {
             }
 
             // Update mouse (pass player for collision checks)
-            const attackedTotem = mouse.update(deltaTime, pathfindingSystem, totem.getPosition(), trees, player);
+            const attackedTotem = mouse.update(
+                deltaTime,
+                pathfindingSystem,
+                totem.getPosition(),
+                trees,
+                player,
+                this.mapSystem
+            );
 
             if (attackedTotem) {
                 // Mouse is attacking totem - deal damage continuously

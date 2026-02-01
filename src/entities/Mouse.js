@@ -4,8 +4,8 @@ import { ENEMY_CONFIG } from '../config/enemies.js';
 import { MOVEMENT_CONFIG } from '../config/movement.js';
 
 export class Mouse {
-    constructor(x, z, hpMultiplier = 1.0) {
-        this.position = new THREE.Vector3(x, 0, z);
+    constructor(x, z, hpMultiplier = 1.0, y = 0) {
+        this.position = new THREE.Vector3(x, y, z);
         this.mesh = null;
         this.speed = ENEMY_CONFIG.mouse.speed;
         this.modelLoaded = false;
@@ -59,10 +59,16 @@ export class Mouse {
         return this.position;
     }
 
-    update(deltaTime, pathfindingSystem, totemPosition, trees = [], player = null) {
+    update(deltaTime, pathfindingSystem, totemPosition, trees = [], player = null, mapSystem = null) {
         if (this.isDestroyed) return false;
 
         const currentTime = Date.now() / 1000; // Convert to seconds
+        const updateGroundY = () => {
+            if (mapSystem && typeof mapSystem.getHeightAt === 'function') {
+                this.position.y = mapSystem.getHeightAt(this.position.x, this.position.z);
+            }
+        };
+        updateGroundY();
         
         // Check if attacking totem (continuous attacks)
         const distanceToTotem = this.position.distanceTo(totemPosition);
@@ -161,6 +167,7 @@ export class Mouse {
                 const moveSpeed = this.speed * deltaTime;
                 this.position.x += direction.x * moveSpeed;
                 this.position.z += direction.y * moveSpeed;
+                updateGroundY();
                 
                 // Update rotation
                 if (this.mesh) {
@@ -191,6 +198,7 @@ export class Mouse {
                     
                     this.position.x += direction.x * moveDistance;
                     this.position.z += direction.y * moveDistance;
+                    updateGroundY();
                     
                     // Update rotation to face movement direction
                     if (this.mesh) {

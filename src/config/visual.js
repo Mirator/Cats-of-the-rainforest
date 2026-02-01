@@ -27,24 +27,43 @@ export const VISUAL_CONFIG = {
     cameraBaseLerpSpeed: 0.1,
     
     // Scene colors
-    dayBackground: 0x5a7c69,
-    nightBackground: 0x344437,
-    dayFogColor: 0x5a7c69,
-    nightFogColor: 0x344437,
+    dayBackground: 0x6f927b,
+    nightBackground: 0x384a3e,
+    dayFogColor: 0x6f927b,
+    nightFogColor: 0x384a3e,
     dayFogNear: 37.5,
     dayFogFar: 150,
-    nightFogNear: 22.5,
-    nightFogFar: 112.5,
-    dayGroundColor: 0x4a7c59,
-    nightGroundColor: 0x2f4338,
-    dayExtendedGroundColor: 0x3a5c49,
-    nightExtendedGroundColor: 0x28392f,
+    nightFogNear: 26.0,
+    nightFogFar: 120.0,
+    dayGroundColor: 0x5a8f6b,
+    nightGroundColor: 0x34483c,
+    dayExtendedGroundColor: 0x4d765c,
+    nightExtendedGroundColor: 0x2c3d33,
+
+    // Terrain + procedural ground textures
+    terrain: {
+        heightAmplitude: 4.2,
+        noiseScale: 0.06,
+        octaves: 3,
+        persistence: 0.5,
+        lacunarity: 2.0,
+        seed: 1337,
+        groundSegments: 48,
+        extendedSegments: 32,
+        extendedGroundOffset: -0.12,
+        heightSteps: 6,
+        textureSize: 64,
+        textureWorldSize: 14,
+        textureCoarseScale: 3,
+        textureFineScale: 8,
+        texturePalette: [0x4a7c59]
+    },
     
     // Lighting
-    dayAmbientIntensity: 0.6,
-    dayDirectionalIntensity: 0.8,
-    nightAmbientIntensity: 0.32,
-    nightDirectionalIntensity: 0.45,
+    dayAmbientIntensity: 0.75,
+    dayDirectionalIntensity: 0.95,
+    nightAmbientIntensity: 0.44,
+    nightDirectionalIntensity: 0.58,
     
     // Day/Night transitions
     transitionDuration: 2.0, // seconds for smooth day/night transitions
