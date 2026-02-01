@@ -39,8 +39,8 @@ export class TutorialSystem {
             },
             {
                 name: "Survive the first night",
-                instructions: "Defend the Forest Totem! Attack enemies with F",
-                controls: "Press F to attack",
+                instructions: "Defend the Forest Totem! Attack enemies with Space or F",
+                controls: "Press Space or F to attack",
                 completionCheck: null
             }
         ];

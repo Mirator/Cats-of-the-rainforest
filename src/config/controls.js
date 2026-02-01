@@ -7,8 +7,8 @@ export const CONTROLS = {
     moveRight: ['d', 'ArrowRight'],
     
     // Actions
-    interact: [' ', 'Space'], // Spacebar or mouse click (for tree cutting, building interactions)
-    attack: ['f'], // Attack enemies (night phase)
+    interact: [' ', 'Space'], // Spacebar for daytime interactions (tree cutting, building interactions)
+    attack: ['f', 'Space'], // Attack enemies (night phase)
     
     // Build mode
     toggleBuildMode: ['b'],
