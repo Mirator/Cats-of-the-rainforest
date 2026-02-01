@@ -178,6 +178,11 @@ export class Game {
                 
                 // Tutorial step 5 completion is checked in updateTutorialUI
             }
+
+            // Regenerate totem when night ends (new day starts)
+            if (dayInfo.state === DayState.DAY) {
+                this.regenerateTotemHealth();
+            }
         });
         
         // Set initial day visuals
@@ -1646,6 +1651,22 @@ export class Game {
             };
         }
         return { hasDiscount: false, discount: { wood: 0, stamina: 0 } };
+    }
+
+    regenerateTotemHealth() {
+        if (!this.forestTotem || this.forestTotem.isDestroyed()) {
+            return;
+        }
+
+        const maxHealth = this.forestTotem.getMaxHealth();
+        const currentHealth = this.forestTotem.getHealth();
+        const missingHealth = maxHealth - currentHealth;
+
+        if (missingHealth > 0) {
+            this.forestTotem.heal(missingHealth);
+        }
+
+        this.uiManager.updateTotemHealth(this.forestTotem.getHealth(), maxHealth);
     }
     
     pauseGame() {
