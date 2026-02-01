@@ -118,7 +118,7 @@ export class BuildModeUI {
         }
     }
     
-    showBuildMenu(buildItems, canAffordCallback, onItemSelected, getDiscountInfo = null) {
+    showBuildMenu(buildItems, canAffordCallback, onItemSelected, getDiscountInfo = null, getResourceInfo = null) {
         if (!this.buildMenu) return;
         
         const menuItemsContainer = this.buildMenu.querySelector('#build-menu-items');
@@ -126,6 +126,10 @@ export class BuildModeUI {
         
         menuItemsContainer.innerHTML = '';
         this.buildMenuItems = [];
+
+        const resources = getResourceInfo ? getResourceInfo() : null;
+        const currentWood = resources ? resources.wood : null;
+        const currentStamina = resources ? resources.stamina : null;
         
         let index = 0;
         for (const [itemId, item] of Object.entries(buildItems)) {
@@ -168,19 +172,23 @@ export class BuildModeUI {
             
             // Build cost display with discount if applicable
             let costDisplay = '';
+            const woodAffordable = currentWood === null ? true : currentWood >= woodCost;
+            const staminaAffordable = currentStamina === null ? true : currentStamina >= staminaCost;
+
             if (hasDiscount) {
                 costDisplay = `
                     <div style="font-size: 12px; color: #aaa;">
                         <span style="text-decoration: line-through; color: #666;">Wood: ${item.woodCost}</span>
-                        <span style="color: #4a7c59; font-weight: bold;"> Wood: ${woodCost}</span>
-                        <span style="color: #aaa;"> | Stamina: ${staminaCost}</span>
+                        <span style="color: ${woodAffordable ? '#4a7c59' : '#ff4d4d'}; font-weight: bold;"> Wood: ${woodCost}</span>
+                        <span style="color: ${staminaAffordable ? '#aaa' : '#ff4d4d'};"> | Stamina: ${staminaCost}</span>
                         <div style="font-size: 10px; color: #4a7c59; margin-top: 2px;">First wave discount</div>
                     </div>
                 `;
             } else {
                 costDisplay = `
                     <div style="font-size: 12px; color: #aaa;">
-                        Wood: ${woodCost} | Stamina: ${staminaCost}
+                        <span style="color: ${woodAffordable ? '#aaa' : '#ff4d4d'};">Wood: ${woodCost}</span>
+                        <span style="color: ${staminaAffordable ? '#aaa' : '#ff4d4d'};"> | Stamina: ${staminaCost}</span>
                     </div>
                 `;
             }

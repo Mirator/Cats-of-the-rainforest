@@ -300,9 +300,9 @@ export class UIManager {
         }
     }
     
-    showBuildMenu(buildItems, canAffordCallback, onItemSelected, getDiscountInfo = null) {
+    showBuildMenu(buildItems, canAffordCallback, onItemSelected, getDiscountInfo = null, getResourceInfo = null) {
         if (this.buildModeUI) {
-            this.buildModeUI.showBuildMenu(buildItems, canAffordCallback, onItemSelected, getDiscountInfo);
+            this.buildModeUI.showBuildMenu(buildItems, canAffordCallback, onItemSelected, getDiscountInfo, getResourceInfo);
         }
     }
     

@@ -407,7 +407,11 @@ export class Game {
                 return this.buildModeSystem.canAffordBuildItem(itemId, this.daySystem, this.resourceSystem, discountInfo);
             },
             (itemId) => this.selectBuildItem(itemId),
-            (itemId) => this.getDiscountInfo(itemId)
+            (itemId) => this.getDiscountInfo(itemId),
+            () => ({
+                wood: this.resourceSystem.getWood(),
+                stamina: this.daySystem.getStamina()
+            })
         );
         
         // Set build mode active visuals
