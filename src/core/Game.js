@@ -770,19 +770,16 @@ export class Game {
     update(deltaTime) {
         // Don't update if game is over
         if (!this.isRunning || this.forestTotem.isDestroyed()) {
+            this.inputManager.update();
             return;
         }
         
         // Don't update game logic when in menu state
         if (this.gameState === 'menu') {
-            // Still update input for any menu interactions
-            this.inputManager.update();
             this.updateMenuScene(deltaTime);
+            this.inputManager.update();
             return;
         }
-        
-        // Update input (needed for ESC key detection even when paused)
-        this.inputManager.update();
         
         // Handle pause menu toggle (ESC key, but not in build mode)
         if (this.gameState === 'paused') {
@@ -796,6 +793,7 @@ export class Game {
                 this.pauseMenuTogglePressed = false;
             }
             // Don't update game logic when paused
+            this.inputManager.update();
             return;
         }
         
@@ -1108,6 +1106,9 @@ export class Game {
             this.updateTutorialUI();
             this.updateTutorialHighlights(deltaTime);
         }
+
+        // Clear one-frame input flags after processing
+        this.inputManager.update();
     }
     
     handleBuildMode(deltaTime) {
