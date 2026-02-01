@@ -25,9 +25,8 @@ export const WAVE_CONFIG = {
             hpMultiplier: 1.4,
             spawnInterval: 2.2,
             enemyTypes: [
-                { type: 'regular', probability: 0.6 },
+                { type: 'regular', probability: 0.65 },
                 { type: 'fast', probability: 0.35 },
-                { type: 'strong', probability: 0.05 }
             ]
         },
         4: {
@@ -40,16 +39,15 @@ export const WAVE_CONFIG = {
             ]
         },
         5: {
-            enemyCount: 6,
+            enemyCount: 1,
             hpMultiplier: 12.0,
             spawnInterval: 0.0, // Instant spawn for boss
             enemyTypes: [
-                { type: 'regular', probability: 0.8333 },
-                { type: 'strong', probability: 0.1667 }
+                { type: 'strong', probability: 1.0 }
             ]
         }
     },
-    
+
     // Wave spawn delay
     initialSpawnDelay: 1.5 // seconds before first enemy spawns
 };
