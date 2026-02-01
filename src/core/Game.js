@@ -73,6 +73,7 @@ export class Game {
         this.totemInfluenceVisualization = null;
         this.usingKeyboardPlacement = false;
         this.buildModeTogglePressed = false;
+        this.awaitingPlacementConfirmRelease = false;
         
         this.lastTime = 0;
         this.isRunning = false;
@@ -431,11 +432,13 @@ export class Game {
         // Exit build mode system
         this.buildModeSystem.exitBuildMode();
         this.usingKeyboardPlacement = false;
+        this.awaitingPlacementConfirmRelease = false;
     }
     
     selectBuildItem(itemId) {
         if (this.buildModeSystem.selectBuildItem(itemId)) {
             this.playSfx('build_select');
+            this.awaitingPlacementConfirmRelease = true;
             // Hide build menu
             this.uiManager.hideBuildMenu();
             
@@ -905,7 +908,8 @@ export class Game {
         for (let i = 0; i < Math.min(itemIds.length, 9); i++) {
             if (this.inputManager.isAnyKeyPressed(numberKeys[i])) {
                 const itemId = itemIds[i];
-                if (this.buildModeSystem.canAffordBuildItem(itemId, this.daySystem, this.resourceSystem)) {
+                const discountInfo = this.getDiscountInfo(itemId);
+                if (this.buildModeSystem.canAffordBuildItem(itemId, this.daySystem, this.resourceSystem, discountInfo)) {
                     this.selectBuildItem(itemId);
                 } else {
                     this.playSfx('build_error');
@@ -933,7 +937,8 @@ export class Game {
             const currentIndex = this.uiManager.selectedBuildItemIndex;
             if (currentIndex >= 0 && currentIndex < itemIds.length) {
                 const itemId = itemIds[currentIndex];
-                if (this.buildModeSystem.canAffordBuildItem(itemId, this.daySystem, this.resourceSystem)) {
+                const discountInfo = this.getDiscountInfo(itemId);
+                if (this.buildModeSystem.canAffordBuildItem(itemId, this.daySystem, this.resourceSystem, discountInfo)) {
                     this.selectBuildItem(itemId);
                 } else {
                     this.playSfx('build_error');
@@ -1014,10 +1019,19 @@ export class Game {
             
             this.ghostPreview.updateValidity(validation.valid);
         }
+
+        // Require confirm input to be released after entering placement
+        if (this.awaitingPlacementConfirmRelease) {
+            const confirmHeld = this.inputManager.isAnyKeyPressed(CONTROLS.confirmBuild) ||
+                this.inputManager.mouse.down;
+            if (!confirmHeld) {
+                this.awaitingPlacementConfirmRelease = false;
+            }
+        }
         
         // Handle placement confirmation
-        if (this.inputManager.isAnyKeyPressed(CONTROLS.confirmBuild) || 
-            (this.inputManager.mouse.clicked && this.inputManager.mouse.button === 0)) {
+        if (!this.awaitingPlacementConfirmRelease && (this.inputManager.isAnyKeyPressed(CONTROLS.confirmBuild) || 
+            (this.inputManager.mouse.clicked && this.inputManager.mouse.button === 0))) {
             this.confirmPlacement(placementX, placementZ, placementY);
         }
         

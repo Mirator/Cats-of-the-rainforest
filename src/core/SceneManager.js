@@ -330,16 +330,14 @@ export class SceneManager {
         
         // Calculate camera position to frame entire map
         // Use orthographic-like positioning: camera high above center, looking down
-        // Calculate distance needed to see entire map with current FOV
+        // Calculate distance needed to see entire playable map with current FOV
         const fov = this.camera.fov * (Math.PI / 180);
-        const aspect = this.camera.aspect;
-        const mapDiagonal = Math.sqrt((boundary * 2) ** 2 + (boundary * 2) ** 2);
+        const mapHalfSize = mapSize / 2;
         
-        // Calculate height needed to see entire map
-        // tan(fov/2) = (mapDiagonal/2) / height
-        const height = (mapDiagonal / 2) / Math.tan(fov / 2);
-        // Add some padding
-        const cameraHeight = height * 1.2;
+        // tan(fov/2) = (mapHalfSize) / height
+        const height = mapHalfSize / Math.tan(fov / 2);
+        // Add some padding to guarantee full map coverage
+        const cameraHeight = height * VISUAL_CONFIG.screenshot.mapPadding;
         
         // Target position: center of map, high above
         const targetPosition = new THREE.Vector3(0, cameraHeight, 0);
@@ -386,10 +384,29 @@ export class SceneManager {
      */
     captureScreenshot() {
         // Render one frame to ensure everything is up to date
+        const size = new THREE.Vector2();
+        this.renderer.getSize(size);
+        const originalWidth = size.x;
+        const originalHeight = size.y;
+        const originalAspect = this.camera.aspect;
+        
+        const squareSize = Math.min(originalWidth, originalHeight);
+        
+        // Render to a square buffer for a square screenshot
+        this.camera.aspect = 1;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(squareSize, squareSize, false);
+        
         this.render();
         
         // Capture screenshot
         const dataURL = this.renderer.domElement.toDataURL('image/png');
+        
+        // Restore renderer and camera settings
+        this.renderer.setSize(originalWidth, originalHeight, false);
+        this.camera.aspect = originalAspect;
+        this.camera.updateProjectionMatrix();
+        
         return dataURL;
     }
     
