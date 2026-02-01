@@ -23,6 +23,7 @@ import { WAVE_CONFIG } from '../config/waves.js';
 import { BUILD_CONFIG } from '../config/build.js';
 import { BUILDING_CONFIG } from '../config/buildings.js';
 import { CONTROLS } from '../config/controls.js';
+import { COMBAT_CONFIG } from '../config/combat.js';
 import * as THREE from 'three';
 
 export class Game {
@@ -255,26 +256,37 @@ export class Game {
         const mapSize = this.mapSystem.getMapSize();
         const boundary = this.mapSystem.getBoundary();
         const treeCount = MAP_CONFIG.treeCount;
+        const minTreeDistance = COMBAT_CONFIG.treeCollisionRadius * 2;
+        const maxAttemptsPerTree = 200;
         
         // Avoid center area for totem (scaled proportionally)
         const centerRadius = MAP_CONFIG.centerRadius;
         
         for (let i = 0; i < treeCount; i++) {
             let x, z;
-            let attempts = 0;
-            
-            do {
+            let placed = false;
+
+            for (let attempts = 0; attempts < maxAttemptsPerTree; attempts++) {
                 x = (Math.random() - 0.5) * (mapSize - 2);
                 z = (Math.random() - 0.5) * (mapSize - 2);
-                attempts++;
-            } while (
-                (x * x + z * z < centerRadius * centerRadius) && 
-                attempts < 50
-            );
-            
-            // Clamp to boundaries
-            x = Math.max(-boundary + 1, Math.min(boundary - 1, x));
-            z = Math.max(-boundary + 1, Math.min(boundary - 1, z));
+
+                // Clamp to boundaries
+                x = Math.max(-boundary + 1, Math.min(boundary - 1, x));
+                z = Math.max(-boundary + 1, Math.min(boundary - 1, z));
+
+                const inCenter = (x * x + z * z) < (centerRadius * centerRadius);
+                if (inCenter) continue;
+
+                if (this.isTreeSpawnPositionClear(x, z, minTreeDistance)) {
+                    placed = true;
+                    break;
+                }
+            }
+
+            if (!placed) {
+                console.warn(`Failed to place tree ${i + 1}/${treeCount} without collisions.`);
+                continue;
+            }
             
             const y = this.mapSystem.getHeightAt(x, z);
             const tree = new Tree(x, z, y);
@@ -283,6 +295,21 @@ export class Game {
             // Initialize model loading
             tree.init();
         }
+    }
+
+    isTreeSpawnPositionClear(x, z, minDistance) {
+        for (const tree of this.trees) {
+            if (tree.isCut) continue;
+
+            const dx = x - tree.position.x;
+            const dz = z - tree.position.z;
+            const distanceSq = (dx * dx) + (dz * dz);
+
+            if (distanceSq < (minDistance * minDistance)) {
+                return false;
+            }
+        }
+        return true;
     }
     
     setupUICallbacks() {

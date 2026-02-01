@@ -15,7 +15,7 @@ export const BUILD_CONFIG = {
         'tower': {
             id: 'tower',
             name: 'Tower',
-            woodCost: 6,
+            woodCost: 5,
             staminaCost: 1,
             icon: '', // No icon
             size: 1.5 // Collision radius

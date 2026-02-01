@@ -3,7 +3,7 @@ export const WAVE_CONFIG = {
     // Base wave configurations
     baseWaves: {
         1: {
-            enemyCount: 14,
+            enemyCount: 5,
             hpMultiplier: 1.0,
             spawnInterval: 2.4,
             enemyTypes: [
@@ -12,7 +12,7 @@ export const WAVE_CONFIG = {
             ]
         },
         2: {
-            enemyCount: 18,
+            enemyCount: 9,
             hpMultiplier: 1.2,
             spawnInterval: 2.3,
             enemyTypes: [
@@ -21,7 +21,7 @@ export const WAVE_CONFIG = {
             ]
         },
         3: {
-            enemyCount: 22,
+            enemyCount: 12,
             hpMultiplier: 1.4,
             spawnInterval: 2.2,
             enemyTypes: [
@@ -31,7 +31,7 @@ export const WAVE_CONFIG = {
             ]
         },
         4: {
-            enemyCount: 26,
+            enemyCount: 15,
             hpMultiplier: 1.7,
             spawnInterval: 2.1,
             enemyTypes: [
