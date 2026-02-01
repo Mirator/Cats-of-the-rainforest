@@ -19,7 +19,7 @@ export const ENEMY_CONFIG = {
     // StrongMouse stats
     strongMouse: {
         speed: 1.4,
-        visualScale: 3.0,
+        visualScale: 2.4,
         defaultHpMultiplier: 9.0,
         damageAmount: 10
     },
