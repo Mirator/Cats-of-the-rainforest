@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { VISUAL_CONFIG } from '../config/visual.js';
 
 export class ConstructionSite {
-    constructor(x, z, buildItem) {
-        this.position = new THREE.Vector3(x, 0, z);
+    constructor(x, z, buildItem, y = 0) {
+        this.position = new THREE.Vector3(x, y, z);
         this.buildItem = buildItem;
         this.mesh = null;
         this.progress = 0.0; // 0.0 to 1.0

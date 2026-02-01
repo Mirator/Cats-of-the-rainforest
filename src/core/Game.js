@@ -96,7 +96,8 @@ export class Game {
         
         // Initialize player at starting position
         const startPos = { x: -5, z: -5 };
-        this.player = new Player(startPos.x, startPos.z);
+        const startY = this.mapSystem.getHeightAt(startPos.x, startPos.z);
+        this.player = new Player(startPos.x, startPos.z, startY);
         this.sceneManager.add(this.player.getMesh());
         
         // Set up callback for when model loads
@@ -109,7 +110,8 @@ export class Game {
         
         // Create Forest Totem at center
         const center = this.mapSystem.getCenter();
-        this.forestTotem = new ForestTotem(center.x, center.z);
+        const centerY = this.mapSystem.getHeightAt(center.x, center.z);
+        this.forestTotem = new ForestTotem(center.x, center.z, centerY);
         this.sceneManager.add(this.forestTotem.getMesh());
         this.forestTotem.init();
         this.forestTotem.setFacingAngle(Math.PI);
@@ -274,7 +276,8 @@ export class Game {
             x = Math.max(-boundary + 1, Math.min(boundary - 1, x));
             z = Math.max(-boundary + 1, Math.min(boundary - 1, z));
             
-            const tree = new Tree(x, z);
+            const y = this.mapSystem.getHeightAt(x, z);
+            const tree = new Tree(x, z, y);
             this.trees.push(tree);
             this.sceneManager.add(tree.getMesh());
             // Initialize model loading
@@ -732,13 +735,13 @@ export class Game {
                 let building = null;
                 
                 if (buildItem.id === 'cat-den') {
-                    building = new CatDen(sitePos.x, sitePos.z);
+                    building = new CatDen(sitePos.x, sitePos.z, sitePos.y);
                     // Track first cat den for tutorial and discount
                     if (!this.firstCatDenBuilt) {
                         this.firstCatDenBuilt = true;
                     }
                 } else if (buildItem.id === 'tower') {
-                    building = new Tower(sitePos.x, sitePos.z);
+                    building = new Tower(sitePos.x, sitePos.z, sitePos.y);
                     this.towers.push(building);
                     // Track first tower for tutorial and discount
                     if (!this.firstTowerBuilt) {
@@ -870,6 +873,7 @@ export class Game {
         
         // Determine placement position (mouse or keyboard)
         let placementX, placementZ;
+        let placementY = 0;
         let usingKeyboard = false;
         
         // Check if keyboard movement keys are pressed (indicates keyboard-only mode)
@@ -884,13 +888,14 @@ export class Game {
             const cursorPos = this.buildModeSystem.getPlacementCursorPosition();
             placementX = cursorPos.x;
             placementZ = cursorPos.z;
+            placementY = this.mapSystem.getHeightAt(placementX, placementZ);
             
             // Show placement cursor
             if (!this.placementCursor) {
                 this.placementCursor = new PlacementCursor();
                 this.sceneManager.add(this.placementCursor.getMesh());
             }
-            this.placementCursor.setPosition(placementX, placementZ);
+            this.placementCursor.setPosition(placementX, placementZ, placementY);
             this.placementCursor.setVisible(true);
         } else {
             // Use mouse position (raycast to ground)
@@ -905,6 +910,7 @@ export class Game {
                 this.buildModeSystem.snapToGrid(pos);
                 placementX = pos.x;
                 placementZ = pos.z;
+                placementY = this.mapSystem.getHeightAt(placementX, placementZ);
             } else {
                 return; // Can't place if mouse isn't over ground
             }
@@ -917,7 +923,7 @@ export class Game {
         
         // Update ghost preview position
         if (this.ghostPreview) {
-            this.ghostPreview.setPosition(placementX, placementZ);
+            this.ghostPreview.setPosition(placementX, placementZ, placementY);
             
             // Get discount info for validation
             const buildItem = this.buildModeSystem.getSelectedBuildItem();
@@ -937,7 +943,7 @@ export class Game {
         // Handle placement confirmation
         if (this.inputManager.isAnyKeyPressed(CONTROLS.confirmBuild) || 
             (this.inputManager.mouse.clicked && this.inputManager.mouse.button === 0)) {
-            this.confirmPlacement(placementX, placementZ);
+            this.confirmPlacement(placementX, placementZ, placementY);
         }
         
         // Handle placement cancellation (right click returns to menu, Esc exits completely)
@@ -949,7 +955,7 @@ export class Game {
         }
     }
     
-    confirmPlacement(x, z) {
+    confirmPlacement(x, z, y = 0) {
         const buildItem = this.buildModeSystem.getSelectedBuildItem();
         if (!buildItem) return;
         
@@ -978,7 +984,7 @@ export class Game {
         this.uiManager.updateStamina(this.daySystem.getStamina(), this.daySystem.getMaxStamina());
         
         // Create construction site
-        const constructionSite = new ConstructionSite(x, z, buildItem);
+        const constructionSite = new ConstructionSite(x, z, buildItem, y);
         this.constructionSites.push(constructionSite);
         this.sceneManager.add(constructionSite.getMesh());
         
@@ -1228,7 +1234,7 @@ export class Game {
         // Create cat at Cat Den position with player's mask color
         const denPos = catDen.getPosition();
         const playerMaskColor = this.player.getMaskColor();
-        const cat = new Cat(denPos.x, denPos.z, playerMaskColor);
+        const cat = new Cat(denPos.x, denPos.z, playerMaskColor, denPos.y);
         
         // Calculate idle position near Forest Totem
         const totemPos = this.forestTotem.getPosition();
@@ -1236,7 +1242,8 @@ export class Game {
         const radius = MAP_CONFIG.catSpawnRadius.min + Math.random() * (MAP_CONFIG.catSpawnRadius.max - MAP_CONFIG.catSpawnRadius.min);
         const idleX = totemPos.x + Math.cos(angle) * radius;
         const idleZ = totemPos.z + Math.sin(angle) * radius;
-        const idlePosition = new THREE.Vector3(idleX, 0, idleZ);
+        const idleY = this.mapSystem.getHeightAt(idleX, idleZ);
+        const idlePosition = new THREE.Vector3(idleX, idleY, idleZ);
         
         cat.setIdlePosition(idlePosition);
         this.cats.push(cat);

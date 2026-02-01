@@ -48,15 +48,15 @@ export class GhostPreview {
         this.updateValidity(false);
     }
     
-    setPosition(x, z) {
+    setPosition(x, z, y = 0) {
         this.position.x = x;
         this.position.z = z;
-        this.position.y = 0;
+        this.position.y = y;
         
         if (this.mesh) {
             this.mesh.position.x = x;
             this.mesh.position.z = z;
-            this.mesh.position.y = 0;
+            this.mesh.position.y = y;
         }
     }
     

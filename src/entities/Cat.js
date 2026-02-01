@@ -6,8 +6,8 @@ import { ANIMATION_CONFIG } from '../config/animation.js';
 import { COMBAT_CONFIG } from '../config/combat.js';
 
 export class Cat extends BaseModel {
-    constructor(x, z, playerMaskColor = null) {
-        const position = new THREE.Vector3(x, 0, z);
+    constructor(x, z, playerMaskColor = null, y = 0) {
+        const position = new THREE.Vector3(x, y, z);
         super(position, {
             modelPath: 'cat6.glb',
             placeholderColor: VISUAL_CONFIG.catPlaceholderColor,
@@ -488,6 +488,10 @@ export class Cat extends BaseModel {
                     this.state = 'available';
                 }
             }
+        }
+        
+        if (mapSystem && typeof mapSystem.getHeightAt === 'function') {
+            this.position.y = mapSystem.getHeightAt(this.position.x, this.position.z);
         }
         
         // Update mesh position

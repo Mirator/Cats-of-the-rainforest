@@ -3,8 +3,8 @@ import { MouseModel } from './MouseModel.js';
 import { ENEMY_CONFIG } from '../config/enemies.js';
 
 export class StrongMouse extends Mouse {
-    constructor(x, z, hpMultiplier = ENEMY_CONFIG.strongMouse.defaultHpMultiplier) {
-        super(x, z, hpMultiplier);
+    constructor(x, z, hpMultiplier = ENEMY_CONFIG.strongMouse.defaultHpMultiplier, y = 0) {
+        super(x, z, hpMultiplier, y);
 
         // We need to override the model creation to apply scale
         this.speed = ENEMY_CONFIG.strongMouse.speed;

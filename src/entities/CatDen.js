@@ -4,8 +4,8 @@ import { BUILDING_CONFIG } from '../config/buildings.js';
 import { VISUAL_CONFIG } from '../config/visual.js';
 
 export class CatDen extends BaseModel {
-    constructor(x, z) {
-        const position = new THREE.Vector3(x, 0, z);
+    constructor(x, z, y = 0) {
+        const position = new THREE.Vector3(x, y, z);
         super(position, {
             modelPath: 'cat_den.glb',
             placeholderColor: VISUAL_CONFIG.catDenPlaceholderColor,
