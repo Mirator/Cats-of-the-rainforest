@@ -76,6 +76,7 @@ export class UIManager {
         this.staminaDisplay.innerHTML = `
             <div style="font-size: 18px; font-weight: bold; margin-bottom: 8px;">Stamina</div>
             <div id="stamina-display" style="margin: 5px 0;">10/10</div>
+            <div id="stamina-note" style="margin-top: 4px; font-size: 11px; color: #b9d7ff; display: none;">Stamina refreshes next day.</div>
         `;
         this.container.appendChild(this.staminaDisplay);
         
@@ -196,9 +197,13 @@ export class UIManager {
     
     updateStamina(current, max) {
         const staminaDisplay = this.staminaDisplay.querySelector('#stamina-display');
+        const staminaNote = this.staminaDisplay.querySelector('#stamina-note');
         
         if (staminaDisplay) {
             staminaDisplay.textContent = `${current}/${max}`;
+        }
+        if (staminaNote) {
+            staminaNote.style.display = current <= 2 ? 'block' : 'none';
         }
     }
     

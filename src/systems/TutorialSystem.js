@@ -15,7 +15,7 @@ export class TutorialSystem {
             },
             {
                 name: "Gather resources",
-                instructions: "Trees provide Food and Wood. Hold Space near a tree to cut it down. Stamina refreshes every day.",
+                instructions: "Trees provide Food and Wood. Hold Space near a tree to cut it down. Stamina is limited each day, so choose your actions wisely.",
                 controls: "Hold Space near a tree",
                 completionCheck: null
             },

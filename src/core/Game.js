@@ -526,6 +526,7 @@ export class Game {
     // Helper method to clean up placement visuals (reduces code duplication)
     cancelPlacementVisuals() {
         if (this.ghostPreview) {
+            this.uiManager.hideTooltip(this.ghostPreview);
             this.sceneManager.remove(this.ghostPreview.getMesh());
             this.ghostPreview.remove();
             this.ghostPreview = null;
@@ -668,12 +669,23 @@ export class Game {
             const focusRadii = [];
             for (let i = 0; i < highlightCount; i++) {
                 const tree = treeCandidates[i];
-                const ring = this.createTutorialRing(tree.position, 0.6, 0.95, 0x7cff6b, 0.55);
-                ring.userData.pulseSpeed = 2 + (i * 0.3);
-                group.add(ring);
-                const treeLight = new THREE.PointLight(0xffe2a1, 1.4, 8, 2);
-                treeLight.position.set(tree.position.x, tree.position.y + 1.7, tree.position.z);
-                group.add(treeLight);
+                const coreRing = this.createTutorialRing(tree.position, 0.45, 0.95, 0x9bff7a, 0.8);
+                coreRing.userData.pulseSpeed = 2.6 + (i * 0.3);
+                coreRing.userData.pulseAmplitude = 0.16;
+                group.add(coreRing);
+
+                const outerRing = this.createTutorialRing(tree.position, 0.95, 1.45, 0x9bff7a, 0.45);
+                outerRing.userData.pulseSpeed = 1.6 + (i * 0.2);
+                outerRing.userData.pulseAmplitude = 0.08;
+                group.add(outerRing);
+
+                const treeBottomLight = new THREE.PointLight(0xffe2a1, 1.6, 10, 2);
+                treeBottomLight.position.set(tree.position.x, tree.position.y + 0.4, tree.position.z);
+                group.add(treeBottomLight);
+
+                const treeTopLight = new THREE.PointLight(0xffe2a1, 2.0, 12, 2);
+                treeTopLight.position.set(tree.position.x, tree.position.y + 2.8, tree.position.z);
+                group.add(treeTopLight);
                 focusTargets.push(tree.position);
                 focusRadii.push(260);
             }
@@ -1260,6 +1272,15 @@ export class Game {
             );
             
             this.ghostPreview.updateValidity(validation.valid);
+            const camera = this.sceneManager.camera;
+            if (!validation.valid && validation.reason === 'Outside totem influence radius') {
+                this.uiManager.showTooltip(this.ghostPreview, {
+                    title: 'Build closer to the Forest Totem',
+                    worldOffset: { x: 0, y: 4.5, z: 0 }
+                }, camera);
+            } else {
+                this.uiManager.hideTooltip(this.ghostPreview);
+            }
         }
 
         // Require confirm input to be released after entering placement

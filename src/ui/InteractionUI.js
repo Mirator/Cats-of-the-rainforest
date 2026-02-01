@@ -638,6 +638,7 @@ export class InteractionUI {
                 content += `<div style="margin-top: 4px; font-size: 12px; color: #aaa; border-top: 1px solid rgba(255, 255, 255, 0.2); padding-top: 4px;">${costsText}</div>`;
             }
         }
+
         
         if (config.hasResources === false) {
             tooltip.style.opacity = '0.6';
